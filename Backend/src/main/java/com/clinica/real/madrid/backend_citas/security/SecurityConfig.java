@@ -72,6 +72,10 @@ public class SecurityConfig {
 
         config.setAllowCredentials(true);
         config.setAllowedOriginPatterns(java.util.List.of(
+            "https://www.reto-salud.online",
+            "https://reto-salud.online",
+            "http://www.reto-salud.online",
+            "http://reto-salud.online",
             "https://frontend-citas-production.up.railway.app",
             "https://*.railway.app",
             "https://*.up.railway.app",
