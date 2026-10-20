@@ -38,6 +38,10 @@ public class Cita {
     @Column(nullable = false)
     private EstadoCita estado = EstadoCita.PENDIENTE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "modalidad", nullable = false)
+    private ModalidadCita modalidad = ModalidadCita.PRESENCIAL;
+
     private String motivo;
 
     @Column(name = "fecha_propuesta")
@@ -87,6 +91,14 @@ public class Cita {
 
     public void setEstado(EstadoCita estado) {
         this.estado = estado;
+    }
+
+    public ModalidadCita getModalidad() {
+        return modalidad;
+    }
+
+    public void setModalidad(ModalidadCita modalidad) {
+        this.modalidad = modalidad;
     }
 
     public String getMotivo() {
