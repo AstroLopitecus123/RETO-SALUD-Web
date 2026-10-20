@@ -1,5 +1,6 @@
 package com.clinica.real.madrid.backend_citas.service;
 
+import com.clinica.real.madrid.backend_citas.exception.HorarioNoDisponibleException;
 import com.clinica.real.madrid.backend_citas.exception.ResourceNotFoundException;
 import com.clinica.real.madrid.backend_citas.model.Cita;
 import com.clinica.real.madrid.backend_citas.model.Disponibilidad;
@@ -99,6 +100,7 @@ public class CitaService {
         return citaRepository.findByMedicoIdOrderByFechaDesc(idMedico);
     }
 
+    @Transactional
     public Cita crearCita(Cita cita) {
         if (cita == null || cita.getMedico() == null || cita.getMedico().getId() == null) {
             throw new RuntimeException("Datos de médico inválidos para crear la cita");
@@ -110,16 +112,12 @@ public class CitaService {
             throw new RuntimeException("No puedes agendar una cita en una fecha u hora que ya pasó");
         }
 
-        List<Disponibilidad> disponibles = disponibilidadRepository
-            .findByMedicoIdAndEstado(cita.getMedico().getId(), Disponibilidad.EstadoDisponibilidad.DISPONIBLE);
-
-        Disponibilidad disp = disponibles.stream()
-            .filter(d -> d.getFecha().equals(cita.getFecha().toLocalDate())
-                      && !cita.getFecha().toLocalTime().isBefore(d.getHoraInicio())
-                      && !cita.getFecha().toLocalTime().isAfter(d.getHoraFin()))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("El horario seleccionado ya no está disponible o no existe. Cita: " 
-                + cita.getFecha() + ", Disponibles: " + disponibles.size()));
+        Disponibilidad disp = disponibilidadRepository.findSlotForUpdate(
+            cita.getMedico().getId(),
+            Disponibilidad.EstadoDisponibilidad.DISPONIBLE,
+            cita.getFecha().toLocalDate(),
+            cita.getFecha().toLocalTime()
+        ).orElseThrow(() -> new HorarioNoDisponibleException("El horario seleccionado ya no está disponible"));
 
         disp.setEstado(Disponibilidad.EstadoDisponibilidad.NO_DISPONIBLE);
         disponibilidadRepository.save(disp);
@@ -220,18 +218,16 @@ public class CitaService {
             disponibilidadRepository.save(disp);
         });
 
-        disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
+        disponibilidadRepository.findSlotForUpdate(
             cita.getMedico().getId(), 
+            Disponibilidad.EstadoDisponibilidad.DISPONIBLE,
             nuevaFecha.toLocalDate(), 
             nuevaFecha.toLocalTime()
         ).ifPresentOrElse(disp -> {
-            if (disp.getEstado() != Disponibilidad.EstadoDisponibilidad.DISPONIBLE) {
-                throw new RuntimeException("El nuevo horario ya no está disponible");
-            }
             disp.setEstado(Disponibilidad.EstadoDisponibilidad.NO_DISPONIBLE);
             disponibilidadRepository.save(disp);
         }, () -> {
-            throw new RuntimeException("El nuevo horario no existe en la agenda del médico");
+            throw new HorarioNoDisponibleException("El nuevo horario ya no está disponible o no existe en la agenda del médico");
         });
 
         cita.setFecha(nuevaFecha);

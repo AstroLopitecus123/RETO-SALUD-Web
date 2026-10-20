@@ -34,6 +34,19 @@ public class GlobalExceptionHandler {
 	    return new ResponseEntity<>(body, HttpStatus.CONFLICT);
 	}
 
+    @ExceptionHandler(HorarioNoDisponibleException.class)
+    @SuppressWarnings("java:S4507")
+    public ResponseEntity<Map<String, Object>> handleHorarioNoDisponible(HorarioNoDisponibleException ex) {
+        System.err.println(ex.getMessage());
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now(java.time.ZoneId.systemDefault()));
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("code", "HORARIO_NO_DISPONIBLE");
+        body.put("message", ex.getMessage());
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     @SuppressWarnings("java:S4507")
     public ResponseEntity<Map<String, Object>> handleNotFound(ResourceNotFoundException ex) {
