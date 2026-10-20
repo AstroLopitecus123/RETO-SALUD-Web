@@ -14,9 +14,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "disponibilidades")
+@Table(name = "disponibilidades", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_disp_bloque", columnNames = {"medico_id", "fecha", "hora_inicio"})
+})
 public class Disponibilidad {
 
     public enum EstadoDisponibilidad {

@@ -76,6 +76,7 @@ CREATE TABLE `disponibilidades` (
   `fecha_creacion` timestamp DEFAULT CURRENT_TIMESTAMP,
   `fecha_actualizacion` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
+  CONSTRAINT `uq_disp_bloque` UNIQUE (`medico_id`, `fecha`, `hora_inicio`),
   FOREIGN KEY (`medico_id`) REFERENCES `medicos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
