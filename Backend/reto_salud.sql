@@ -93,8 +93,8 @@ CREATE TABLE `citas` (
   `fecha_creacion` timestamp DEFAULT CURRENT_TIMESTAMP,
   `fecha_actualizacion` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  FOREIGN KEY (`paciente_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`medico_id`) REFERENCES `medicos` (`id`) ON DELETE CASCADE
+  FOREIGN KEY (`paciente_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT,
+  FOREIGN KEY (`medico_id`) REFERENCES `medicos` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE INDEX idx_citas_medico_fecha ON citas (medico_id, fecha);
 
@@ -109,8 +109,8 @@ CREATE TABLE `pagos` (
   `fecha_pago` datetime DEFAULT NULL,
   `transaccion_id` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  FOREIGN KEY (`cita_id`) REFERENCES `citas` (`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+  FOREIGN KEY (`cita_id`) REFERENCES `citas` (`id`) ON DELETE RESTRICT,
+  FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `comprobantes` (
@@ -132,7 +132,7 @@ CREATE TABLE `historial` (
   `fecha_registro` timestamp DEFAULT CURRENT_TIMESTAMP,
   `fecha_actualizacion` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  FOREIGN KEY (`cita_id`) REFERENCES `citas` (`id`) ON DELETE CASCADE
+  FOREIGN KEY (`cita_id`) REFERENCES `citas` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 8. Crear otras tablas independientes
