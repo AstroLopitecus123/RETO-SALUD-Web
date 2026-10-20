@@ -79,6 +79,7 @@ CREATE TABLE `disponibilidades` (
   CONSTRAINT `uq_disp_bloque` UNIQUE (`medico_id`, `fecha`, `hora_inicio`),
   FOREIGN KEY (`medico_id`) REFERENCES `medicos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE INDEX idx_disp_medico_fecha_estado ON disponibilidades (medico_id, fecha, estado);
 
 CREATE TABLE `citas` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -94,6 +95,7 @@ CREATE TABLE `citas` (
   FOREIGN KEY (`paciente_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`medico_id`) REFERENCES `medicos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE INDEX idx_citas_medico_fecha ON citas (medico_id, fecha);
 
 -- 7. Crear tablas derivadas de las Citas (Pagos e Historial Médico)
 CREATE TABLE `pagos` (

@@ -12,14 +12,20 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Index;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "disponibilidades", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_disp_bloque", columnNames = {"medico_id", "fecha", "hora_inicio"})
-})
+@Table(name = "disponibilidades", 
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uq_disp_bloque", columnNames = {"medico_id", "fecha", "hora_inicio"})
+    },
+    indexes = {
+        @Index(name = "idx_disp_medico_fecha_estado", columnList = "medico_id, fecha, estado")
+    }
+)
 public class Disponibilidad {
 
     public enum EstadoDisponibilidad {
