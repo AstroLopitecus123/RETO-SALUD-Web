@@ -1,0 +1,25 @@
+name: Generar Metricas de PageSpeed
+on:
+  schedule: [{cron: "0 0 * * *"}]
+  push: {branches: ["main", "master"]}
+  workflow_dispatch:
+
+jobs:
+  github-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generar PageSpeed
+        uses: lowlighter/metrics@latest
+        with:
+          filename: assets/pagespeed.svg
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ""
+          plugin_pagespeed: yes
+          plugin_pagespeed_detailed: yes
+          extras_css: |
+            h2.field, h2.field + .field, .audits { display: none !important; }
+            .gauge text { font-size: 55px !important; font-weight: 900 !important; }
+          plugin_pagespeed_url: https://www.reto-salud.online
+          plugin_pagespeed_token: ${{ secrets.PAGESPEED_TOKEN }}

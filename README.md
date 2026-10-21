@@ -1,99 +1,168 @@
-# RETO SALUD
-
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./assets/RETOSALUD-blanco.png">
-    <source media="(prefers-color-scheme: light)" srcset="./assets/RETOSALUD.png">
-    <img alt="Logo RETO SALUD" src="./assets/RETOSALUD.png" width="500">
-  </picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/RETOSALUD-blanco.png">
+  <source media="(prefers-color-scheme: light)" srcset="./assets/RETOSALUD.png">
+  <img alt="Logo RETO SALUD" src="./assets/RETOSALUD.png" width="520">
+</picture>
+
+# RETO SALUD
+### Plataforma Integral de Gestión de Citas Médicas, Telemedicina y Auditoría Clínica
+
+[![Angular](https://img.shields.io/badge/Angular-19.1-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-17_LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Railway](https://img.shields.io/badge/Railway-Cloud_Deploy-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](https://railway.app/)
+
+<br/>
+
+**[Sitio Web Oficial](https://www.reto-salud.online)** • **[Rendimiento](#rendimiento-y-auditoría-lighthouse)** • **[Arquitectura](#arquitectura-general)** • **[Stack Tecnológico](#stack-tecnológico)** • **[Roles](#roles-y-funcionalidades)** • **[Instalación](#instalación-y-configuración)** • **[Documentación](#documentación-adicional)**
+
 </div>
 
-Sistema completo de gestión de citas médicas y teleconsultas desarrollado con **Angular** y **Spring Boot**, implementando arquitectura REST con autenticación JWT, integración de pagos con Stripe, videollamadas con Agora, y transcripción de voz (subtítulos) en tiempo real con Deepgram.
+---
+
+## Rendimiento y Auditoría (Lighthouse)
+
+<div align="center">
+  <p>Análisis en tiempo real de <b><a href="https://www.reto-salud.online/" target="_blank">RETO Salud</a></b></p>
+  <img src="./assets/pagespeed.svg?v=1" alt="Métricas PageSpeed RETO Salud" />
+</div>
+
+---
 
 ## Arquitectura General
-La arquitectura del sistema **RETO SALUD** está diseñada con un enfoque moderno y modular (Cliente-Servidor). Como se ilustra en el siguiente diagrama, la solución se divide en dos capas principales (Frontend en Angular y Backend en Spring Boot) que se comunican mediante una API REST en formato JSON. 
 
-Ambas capas se integran de forma independiente con diversos servicios externos especializados para proveer una experiencia completa y escalable (videollamadas, accesibilidad por voz, mapas interactivos, pasarela de pagos, inteligencia artificial y gestión en la nube).
+La arquitectura de **RETO SALUD** está diseñada bajo un enfoque moderno y desacoplado **Cliente-Servidor (SPA + REST API)**. Se divide en dos capas principales que se comunican mediante una API REST en formato JSON, integradas con servicios especializados en la nube para telemedicina, inteligencia artificial, mapas y pagos.
 
-![Arquitectura General](./assets/arquitectura.png?v=2)
+<div align="center">
+  <img src="./assets/arquitectura.png" alt="Arquitectura General RETO SALUD" width="850">
+</div>
+
+---
 
 ## Stack Tecnológico
 
 | Capa | Tecnología | Propósito |
-|------|------------|-----------|
-| **Frontend** | Angular | Framework SPA |
-| **Backend** | Spring Boot | Framework REST API |
-| **Java** | OpenJDK 17+ | Runtime Environment |
-| **Database** | MySQL | Sistema de gestión de base de datos |
-| **Autenticación** | JWT | Tokens de autenticación segura |
-| **Videollamadas** | Agora SDK | Plataforma de Teleconsulta |
-| **IA / Accesibilidad** | Deepgram | Subtítulos en vivo y Navegación por Voz |
-| **Chatbot IA** | Gemini API | Asistente virtual inteligente |
-| **Mapas** | Leaflet | Ubicación de clínicas |
-| **Pagos** | Stripe | Pasarela de pagos segura |
-| **Imágenes** | Cloudinary | Almacenamiento de fotos de perfil |
-| **Email** | Gmail SMTP | Envío de confirmaciones y recuperación |
+| :--- | :--- | :--- |
+| **Frontend** | <img src="https://skillicons.dev/icons?i=angular" width="22" height="22" align="center" /> **Angular 19** | Framework SPA reactivo y modular para la interfaz de usuario |
+| **Lenguaje Frontend** | <img src="https://skillicons.dev/icons?i=ts" width="22" height="22" align="center" /> **TypeScript 5.5** | Tipado estático y escalabilidad en lógica de cliente |
+| **Backend** | <img src="https://skillicons.dev/icons?i=spring" width="22" height="22" align="center" /> **Spring Boot 3.2** | Framework REST API, seguridad e inyección de dependencias |
+| **Runtime Backend** | <img src="https://skillicons.dev/icons?i=java" width="22" height="22" align="center" /> **Java 17 LTS** | Runtime OpenJDK con alto rendimiento y soporte empresarial |
+| **Base de Datos** | <img src="https://skillicons.dev/icons?i=mysql" width="22" height="22" align="center" /> **MySQL 8.0** | Motor de base de datos relacional con bloqueo pesimista e índices |
+| **ORM & Persistencia** | <img src="https://skillicons.dev/icons?i=hibernate" width="22" height="22" align="center" /> **Hibernate JPA** | Mapeo objeto-relacional y gestión transaccional |
+| **Autenticación** | <img src="https://cdn.simpleicons.org/jsonwebtokens/D63AFF" width="22" height="22" align="center" /> **JWT (JSON Web Tokens)** | Autenticación stateless segura con expiración y roles |
+| **Teleconsulta** | <img src="https://cdn.simpleicons.org/agora/099DFD" width="22" height="22" align="center" /> **Agora RTC SDK** | Videollamadas seguras WebRTC de alta definición en tiempo real |
+| **IA / Accesibilidad** | <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="22" height="22" align="center" /> **Deepgram AI** | Transcripción de voz a texto en vivo (subtítulos) y comandos |
+| **Chatbot con IA** | <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="22" height="22" align="center" /> **Google Gemini API** | Asistente de salud virtual inteligente 24/7 con IA generativa |
+| **Mapas Interactivos** | <img src="https://cdn.simpleicons.org/leaflet/199900" width="22" height="22" align="center" /> **Leaflet / OSM** | Ubicación geográfica interactiva de clínicas y sedes |
+| **Pasarela de Pagos** | <img src="https://cdn.simpleicons.org/stripe/635BFF" width="22" height="22" align="center" /> **Stripe** | Procesamiento seguro de pagos en línea con tarjeta |
+| **Gestión de Imágenes** | <img src="https://cdn.simpleicons.org/cloudinary/3448C5" width="22" height="22" align="center" /> **Cloudinary** | Almacenamiento en la nube y optimización de fotos de perfil |
+| **Correos y Notificaciones** | <img src="https://cdn.simpleicons.org/gmail/EA4335" width="22" height="22" align="center" /> **Gmail SMTP & Twilio** | Envío de confirmaciones por correo electrónico y WhatsApp |
+| **Infraestructura Cloud** | <img src="https://cdn.simpleicons.org/railway/BD00FF" width="22" height="22" align="center" /> **Railway** | Despliegue en la nube con HTTPS/SSL y conexión gestionada |
 
-## Estructura de Base de Datos
+---
 
-El sistema utiliza MySQL con las siguientes entidades principales:
-- **Usuarios / Pacientes / Médicos / Administradores**: Gestión de roles y permisos.
-- **Especialidades**: Catálogo de áreas médicas disponibles.
-- **Disponibilidad**: Horarios de atención configurados por cada médico.
-- **Citas**: Registro central de citas con estados (Pendiente, Confirmada, Finalizada, Cancelada).
-- **Pagos**: Historial de transacciones de Stripe y efectivo.
-- **Historial Clínico**: Registro médico del paciente.
-- **Notificaciones**: Sistema de alertas internas.
+## Roles y Funcionalidades
 
-## Prerrequisitos
+### Pacientes
+* **Registro e Inicio de Sesión Seguro:** Autenticación por correo y contraseña o con Google Sign-In (OAuth 2.0).
+* **Reserva de Citas:** Búsqueda de médicos por especialidad y disponibilidad horaria, seleccionando modalidad **Presencial** o **Virtual** (Teleconsulta).
+* **Telemedicina en Vivo:** Videollamada interactiva con **Agora RTC SDK**.
+* **Accesibilidad por Voz y Subtítulos:** Transcripción en tiempo real con **Deepgram AI** para personas con dificultades auditivas y comandos de navegación por voz.
+* **Pasarela de Pagos:** Pagos en línea mediante tarjeta de crédito/débito con **Stripe** o confirmación de pago en efectivo.
+* **Asistente Virtual con IA:** Chatbot inteligente potenciado por **Google Gemini API** para resolver consultas las 24 horas.
+* **Mapa Interactivo:** Localización de sedes físicas mediante **Leaflet** y OpenStreetMap.
+* **Historial Clínico y Recetas:** Visualización de diagnósticos, notas de evolución y recetas médicas.
 
-- **Java 17** o superior
-- **Node.js 18** o superior
-- **MySQL 8.0** o superior
-- **Angular CLI**
+### Médicos
+* **Panel de Disponibilidad:** Apertura y configuración de bloques de atención por fecha y horario.
+* **Sala de Teleconsulta:** Atención médica virtual uno a uno con el paciente con control de cámara y micrófono.
+* **Emisión de Diagnósticos:** Registro de historial clínico y prescripción de recetas al culminar la cita.
+* **Agenda Médica:** Visualización y control de citas programadas, confirmadas, reprogramadas o canceladas.
+
+### Recepción / Operador
+* **Citas Asistidas:** Búsqueda rápida de horarios y registro de citas para pacientes presenciales o por llamada telefónica.
+* **Validación de Llegada:** Confirmación de asistencia presencial de los pacientes.
+* **Cobro en Efectivo:** Emisión de comprobantes y validación de pagos en sede física.
+
+### Administradores
+* **Gestión Integral de Usuarios:** Creación, edición, activación y bloqueo de pacientes, médicos y recepcionistas.
+* **Catálogo de Especialidades:** Creación y mantenimiento de especialidades médicas con sus tarifas base.
+* **Métricas y Notificaciones:** Panel de supervisión global de citas, pagos y notificaciones del sistema.
+
+---
+
+## Características Principales
+
+### <img src="https://cdn.simpleicons.org/agora/099DFD" width="20" height="20" align="center" /> Telemedicina Integrada
+* Videollamadas seguras WebRTC punto a punto mediante **Agora SDK**.
+* Opciones completas de interacción: mutear micrófono, apagar cámara y finalizar sesión de consulta.
+
+### <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="20" height="20" align="center" /> Accesibilidad Avanzada
+* **Subtítulos en Vivo:** Transcripción de voz a texto en tiempo real con **Deepgram** orientada a personas con dificultades auditivas.
+* **Navegación por Voz:** Dictado de comandos e información directamente desde el navegador.
+
+### <img src="https://cdn.simpleicons.org/stripe/635BFF" width="20" height="20" align="center" /> Integración de Pagos
+* Checkout integrado con **Stripe Elements** para pagos con tarjeta.
+* Soporte nativo para registro y emisión de comprobantes en pagos en efectivo.
+
+### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="20" height="20" align="center" /> Chatbot Inteligente
+* Asistente virtual de salud impulsado por la API de **Google Gemini**.
+* Respuestas contextuales inmediatas a preguntas frecuentes de los pacientes.
+
+---
+
+## Estructura del Repositorio
+
+<div align="center">
+  <img src="./assets/estructura.png" alt="Estructura del Proyecto RETO SALUD" width="850"/>
+</div>
+
+---
 
 ## Instalación y Configuración
 
 ### 1. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/AstroLopitecus123/Citas-Medicas-DOCgosi.git
-cd Citas-Medicas-DOCgosi
+git clone https://github.com/AstroLopitecus123/RETO-SALUD-Web.git
+cd RETO-SALUD-Web
 ```
 
 ### 2. Configurar Base de Datos
 
-Ejecutar el script SQL o permitir que Hibernate genere las tablas. Primero crear la base de datos:
+Crear la base de datos en MySQL y ejecutar el script SQL oficial [`Backend/reto_salud.sql`](./Backend/reto_salud.sql):
 
 ```sql
-CREATE DATABASE bd_citas_medicas;
-USE bd_citas_medicas;
+CREATE DATABASE IF NOT EXISTS db_reto_salud;
+USE db_reto_salud;
 ```
 
 ### 3. Configurar Backend
 
 1. **Navegar al directorio del backend:**
-
 ```bash
 cd Backend
 ```
 
 2. **Configurar variables de entorno:**
-   - Crear o modificar el archivo `application.properties` en `src/main/resources/`
-   - Configurar las siguientes variables:
+Crear o modificar el archivo `application.properties` en `src/main/resources/` con tus credenciales:
 
 ```properties
 # Base de Datos
-spring.datasource.url=jdbc:mysql://localhost:3306/bd_citas_medicas?serverTimezone=UTC
+spring.datasource.url=jdbc:mysql://localhost:3306/db_reto_salud?serverTimezone=UTC
 spring.datasource.username=tu_usuario
 spring.datasource.password=tu_password
 
 # JWT
 jwt.secret=tu_clave_secreta_super_segura
-jwt.expiration=86400000
+jwt.expirationMs=86400000
 
 # Stripe
-stripe.api.key=sk_test_tu_clave_secreta_stripe
+stripe.secret-key=sk_test_tu_clave_secreta_stripe
 
 # Correo (Gmail SMTP)
 spring.mail.host=smtp.gmail.com
@@ -101,251 +170,176 @@ spring.mail.port=587
 spring.mail.username=tu_correo@gmail.com
 spring.mail.password=tu_contraseña_de_aplicacion
 spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
 
-# Cloudinary
-cloudinary.url=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+# Twilio WhatsApp
+twilio.account.sid=tu_account_sid
+twilio.auth.token=tu_auth_token
+twilio.whatsapp.from=whatsapp:+14155238886
 
 # Teleconsulta (Agora & Deepgram)
 agora.appId=tu_agora_app_id
 agora.appCertificate=tu_agora_certificate
-deepgram.api.key=tu_deepgram_api_key
+deepgram.apiKey=tu_deepgram_api_key
 
 # IA (Chatbot)
 GEMINI_API_KEY=tu_gemini_api_key
+
+# Google OAuth
+google.client.id=tu_google_client_id
+
+# Cloudinary
+cloudinary.cloud-name=tu_cloud_name
+cloudinary.api-key=tu_api_key
+cloudinary.api-secret=tu_api_secret
 ```
 
 3. **Instalar dependencias y ejecutar:**
-
 ```bash
-mvn clean install
-mvn spring-boot:run
+./mvnw clean install
+./mvnw spring-boot:run
 ```
-
 El backend estará disponible en: `http://localhost:8080`
 
 ### 4. Configurar Frontend
 
 1. **Navegar al directorio del frontend:**
-
 ```bash
-cd Frontend
+cd ../Frontend
 ```
 
-2. **Configurar entorno:**
-   Navega a `src/environments/` y edita `environment.ts`:
-
+2. **Configurar variables de entorno:**
+Navega a `src/environments/` y edita `environment.ts`:
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080/api/v1',
-  stripePublicKey: 'pk_test_tu_clave_publica_stripe'
+  apiUrl: 'http://localhost:8080' // Base URL del Backend
 };
 ```
+*(Para pagos con Stripe, la clave pública se encuentra configurada en `src/app/config/stripe.config.ts`)*.
 
 3. **Instalar dependencias:**
-
 ```bash
 npm install
 ```
 
 4. **Ejecutar en modo desarrollo:**
-
 ```bash
 ng serve -o
 ```
-
 El frontend estará disponible en: `http://localhost:4200`
 
 ---
 
 ## Configuración de Servicios Externos
 
-### Stripe (Pagos)
-1. Crear cuenta en [Stripe](https://stripe.com)
-2. Obtener claves de prueba desde el Dashboard
-3. Configurar `stripe.api.key` en el Backend y `stripePublicKey` en el Frontend.
+### <img src="https://cdn.simpleicons.org/stripe/635BFF" width="20" height="20" align="center" /> Stripe (Pagos)
+1. Crear cuenta en [Stripe](https://stripe.com/).
+2. Obtener las claves de prueba (`Publishable key` y `Secret key`) desde el Dashboard.
+3. Configurar `stripe.secret-key` en el Backend y la clave pública en `stripe.config.ts`.
 
-### Gmail SMTP (Correos)
-1. Habilitar autenticación de 2 factores en tu cuenta Gmail
-2. Generar contraseña de aplicación desde Configuración de Google
+### <img src="https://cdn.simpleicons.org/gmail/EA4335" width="20" height="20" align="center" /> Gmail SMTP (Correos)
+1. Habilitar autenticación en 2 pasos en tu cuenta de Google.
+2. Generar una **Contraseña de aplicación** desde la seguridad de la cuenta.
 3. Configurar `spring.mail.username` y `spring.mail.password` en `application.properties`.
 
-### Cloudinary (Imágenes)
-1. Crear cuenta en [Cloudinary](https://cloudinary.com/)
-2. Obtener API Environment variable (`CLOUDINARY_URL`)
+### <img src="https://cdn.simpleicons.org/cloudinary/3448C5" width="20" height="20" align="center" /> Cloudinary (Imágenes)
+1. Crear cuenta gratuita en [Cloudinary](https://cloudinary.com/).
+2. Obtener Cloud Name, API Key y API Secret desde la consola.
 3. Configurar en `application.properties`.
 
-### Agora SDK (Videollamadas)
-1. Crear cuenta en [Agora Console](https://console.agora.io/)
-2. Crear un proyecto y habilitar "App Certificate"
+### <img src="https://cdn.simpleicons.org/agora/099DFD" width="20" height="20" align="center" /> Agora SDK (Videollamadas)
+1. Crear cuenta en [Agora Console](https://console.agora.io/).
+2. Crear un proyecto y habilitar el modo **App Certificate**.
 3. Configurar `agora.appId` y `agora.appCertificate` en `application.properties`.
 
-### Deepgram (Transcripción por Voz)
-1. Crear cuenta en [Deepgram](https://deepgram.com/)
-2. Generar una API Key
-3. Configurar `deepgram.api.key` en `application.properties`.
+### <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="20" height="20" align="center" /> Deepgram (Transcripción por Voz)
+1. Crear cuenta en [Deepgram](https://deepgram.com/).
+2. Generar una **API Key** desde la consola.
+3. Configurar `deepgram.apiKey` en `application.properties`.
 
-### Gemini API (Chatbot)
-1. Acceder a [Google AI Studio](https://aistudio.google.com/)
-2. Generar una API Key
+### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="20" height="20" align="center" /> Gemini API (Chatbot)
+1. Acceder a [Google AI Studio](https://aistudio.google.com/).
+2. Generar una **API Key** para modelos Gemini.
 3. Configurar `GEMINI_API_KEY` en `application.properties`.
 
-### Google Cloud Console (Autenticación)
-1. Crear un proyecto en [Google Cloud Console](https://console.cloud.google.com/)
-2. Configurar la pantalla de consentimiento y crear credenciales OAuth 2.0 (Client ID)
+### <img src="https://skillicons.dev/icons?i=gcp" width="20" height="20" align="center" /> Google Cloud Console (Autenticación)
+1. Crear un proyecto en [Google Cloud Console](https://console.cloud.google.com/).
+2. Configurar la pantalla de consentimiento y generar credenciales **OAuth 2.0 Client ID**.
 3. Configurar `google.client.id` en `application.properties`.
 
 ---
 
-## Estructura del Proyecto
+## Seguridad del Sistema
 
-<div align="center">
-  <img src="./assets/estructura.png" alt="Estructura del Proyecto RETO SALUD" width="800"/>
-</div>
-
----
-
-## Funcionalidades Principales
-
-### Para Pacientes
-- ✅ Registro e inicio de sesión seguro
-- ✅ Búsqueda de médicos por especialidad y disponibilidad
-- ✅ Reserva de citas médicas presenciales y virtuales
-- ✅ Pago en línea con tarjeta de crédito/débito (Stripe) o pago en efectivo
-- ✅ Teleconsulta con videollamada (Agora)
-- ✅ Subtítulos en vivo para accesibilidad (Deepgram)
-- ✅ Asistente de IA (Chatbot) para responder dudas frecuentes (Gemini)
-- ✅ Mapa interactivo para ubicar la clínica física (Leaflet)
-- ✅ Historial médico y recetas
-
-### Para Médicos
-- ✅ Panel de control para gestionar disponibilidad de horarios
-- ✅ Visualización de citas programadas
-- ✅ Sala de teleconsulta integrada con el paciente
-- ✅ Historial clínico de pacientes atendidos
-
-### Para Administradores
-- ✅ Gestión de usuarios (Crear, Editar, Bloquear)
-- ✅ Gestión de especialidades médicas
-- ✅ Panel de métricas y notificaciones globales
+* **Autenticación Stateless:** Tokens JWT con expiración controlada y validación en cada petición.
+* **Encriptación Fuerte:** Almacenamiento seguro de contraseñas mediante algoritmo **BCrypt**.
+* **Políticas CSP Estrictas:** Cabeceras HTTP en `server.js` con protección contra inyecciones arbitrarias (OWASP A05).
+* **CORS Centralizado:** Configuración explícita de orígenes permitidos tanto en desarrollo como en producción.
+* **Control de Concurrencia:** Bloqueo pesimista en base de datos (`@Lock(PESSIMISTIC_WRITE)`) para prevenir reservas duplicadas.
+* **Auditoría Clínica (Ley N° 29733):** Integridad referencial con `ON DELETE RESTRICT` para salvaguardar historiales y pagos médicos.
 
 ---
 
 ## Comandos Útiles
 
 ### Backend
-
 ```bash
 # Compilar proyecto
 cd Backend
-mvn clean compile
+./mvnw clean compile
 
-# Ejecutar aplicación
-mvn spring-boot:run
+# Ejecutar pruebas unitarias
+./mvnw test
 
-# Limpiar y compilar
-mvn clean install
+# Iniciar servidor Spring Boot
+./mvnw spring-boot:run
 ```
 
 ### Frontend
-
 ```bash
 # Instalar dependencias
 cd Frontend
 npm install
 
-# Ejecutar en desarrollo
-ng serve
-
-# Ejecutar y abrir navegador
+# Iniciar servidor de desarrollo
 ng serve -o
 
 # Compilar para producción
 ng build --configuration production
+
+# Ejecutar auditoría de accesibilidad con Cypress + Axe-Core
+npx cypress run --spec "cypress/e2e/accesibilidad.cy.ts"
 ```
 
 ---
 
-## Seguridad
+## Documentación Adicional
 
-- 🔒 Autenticación JWT con expiración configurable
-- 🔒 Encriptación de contraseñas con BCrypt
-- 🛡️ Validación de datos en frontend y backend
-- 🌐 CORS configurado para desarrollo y producción
-- 🔑 Variables de entorno protegidas (no versionadas)
-- 👮 Guards de autenticación por rol en Angular
-
----
-
-## Características Especiales
-
-### Telemedicina Integrada
-- Videollamadas seguras P2P con Agora SDK.
-- Opciones de mutear micrófono y apagar cámara.
-
-### Accesibilidad Avanzada
-- **Subtítulos en Vivo:** Transcripción de voz a texto en tiempo real usando Deepgram para personas con problemas auditivos.
-- **Navegación por Voz:** Capacidad de dictar información directamente a la plataforma.
-
-### Integración de Pagos
-- Checkout seguro con Stripe para pagos con tarjeta.
-- Soporte nativo para registro de pagos en efectivo.
-
-### Chatbot Inteligente
-- Asistente de salud virtual potenciado por Gemini API.
-- Respuestas en tiempo real para dudas de usuarios.
-
----
-
-## Base de Datos
-
-### Estructura Completa
-El sistema incluye la configuración y relaciones de todas las entidades necesarias para clínicas.
-- **Usuarios** (Paciente, Médico, Recepcionista, Administrador)
-- **Citas** (Horarios, Estados, Historial)
-- **Pagos** (Métodos, Transacciones)
-- **Especialidades** y asignación a médicos.
-
-
-### Documentación Adicional
-
-- Ver `Backend/README.md` para detalles del backend
-- Ver `Frontend/README.md` para detalles del frontend
+* 📖 Ver [Backend/README.md](./Backend/README.md) para detalles técnicos y configuración de la API Spring Boot.
+* 📖 Ver [Frontend/README.md](./Frontend/README.md) para detalles de componentes y arquitectura Angular.
 
 ---
 
 ## Soporte y Resolución de Problemas
 
-### Problemas Comunes
-
 1. **Error de conexión a la base de datos:**
-   - Verificar que MySQL esté ejecutándose
-   - Revisar credenciales en `application.properties`
-   - Confirmar que la base de datos existe
+   * Verificar que el servicio MySQL esté iniciado.
+   * Confirmar que la base de datos `db_reto_salud` exista.
+   * Validar credenciales de usuario y contraseña en `application.properties`.
 
-2. **Error de CORS:**
-   - Verificar configuración en el backend (WebConfig)
-   - Confirmar que el frontend esté en `localhost:4200`
+2. **Error de CORS en Frontend:**
+   * Asegurar que el origen del frontend (`http://localhost:4200` o dominio en producción) esté registrado en `SecurityConfig.java`.
 
-3. **Error de autenticación:**
-   - Verificar que el token JWT esté configurado
-   - Revisar expiración del token
-   - Confirmar que el usuario esté activo
+3. **Falla en Videollamada o Subtítulos:**
+   * Verificar las credenciales de `agora.appId` y `deepgram.apiKey`.
+   * Asegurarse de haber concedido permisos de micrófono y cámara en el navegador web.
 
-4. **Pagos con Stripe no funcionan:**
-   - Verificar claves de API en `application.properties` y `environment.ts`
-   - Confirmar que las claves sean de modo test
-   - Revisar logs del backend para errores
-
-5. **Problemas con Videollamadas o Subtítulos:**
-   - Verificar claves de Agora y Deepgram
-   - Asegurarse de dar permisos de micrófono/cámara en el navegador
+4. **Pagos de Stripe no procesados:**
+   * Comprobar que las claves de prueba `pk_test_...` y `sk_test_...` coincidan entre frontend y backend.
 
 ---
 
 ## Licencia
 
 Este proyecto está en desarrollo y creación continua futuras
-
----
