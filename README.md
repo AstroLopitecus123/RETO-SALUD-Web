@@ -356,6 +356,39 @@ npx cypress run --spec "cypress/e2e/accesibilidad.cy.ts"
 
 ---
 
+## Creadores del Proyecto
+
+<div align="center">
+
+<a href="https://github.com/Astrolopitecus123/RETO-SALUD-Web/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Astrolopitecus123/RETO-SALUD-Web" alt="Contribuidores" />
+</a>
+
+</div>
+
+---
+
+## Actividad del Repositorio
+
+<div align="center">
+
+<img src="https://activity-graph.vercel.app/graph?username=Astrolopitecus123&theme=github-compact" alt="Gráfico de Actividad" width="100%" />
+
+</div>
+
+---
+
 ## Licencia
 
 Este proyecto está en desarrollo y creación continua futuras
+
+---
+
+## Contador de Visitas
+
+<div align="center">
+
+<img src="https://count.getloli.com/@Astrolopitecus123-RETO-SALUD-Web?theme=sketch-1" alt="Contador de Visitas" />
+
+</div>
+
