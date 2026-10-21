@@ -28,7 +28,10 @@
 
 <div align="center">
   <p>Análisis en tiempo real de <b><a href="https://www.reto-salud.online/" target="_blank">RETO Salud</a></b></p>
-  <img src="./assets/pagespeed.svg?v=1" alt="Métricas PageSpeed RETO Salud" />
+  <a href="https://pagespeed.web.dev/analysis/https-www-reto-salud-online/g94v7r8ncc?form_factor=desktop" target="_blank" title="Ver informe oficial en vivo de Google PageSpeed Insights">
+    <img src="./assets/pagespeed.svg?v=2" alt="Métricas PageSpeed RETO Salud" />
+  </a>
+  <p><small><i>Haz clic en los círculos para ver la auditoría en vivo en <b>Google PageSpeed Insights</b></i></small></p>
 </div>
 
 ---
@@ -47,21 +50,21 @@ La arquitectura de **RETO SALUD** está diseñada bajo un enfoque moderno y desa
 
 | Capa | Tecnología | Propósito |
 | :--- | :--- | :--- |
-| **Frontend** | <img src="https://skillicons.dev/icons?i=angular" width="22" height="22" align="center" /> **Angular 19** | Framework SPA reactivo y modular para la interfaz de usuario |
-| **Lenguaje Frontend** | <img src="https://skillicons.dev/icons?i=ts" width="22" height="22" align="center" /> **TypeScript 5.5** | Tipado estático y escalabilidad en lógica de cliente |
-| **Backend** | <img src="https://skillicons.dev/icons?i=spring" width="22" height="22" align="center" /> **Spring Boot 3.2** | Framework REST API, seguridad e inyección de dependencias |
-| **Runtime Backend** | <img src="https://skillicons.dev/icons?i=java" width="22" height="22" align="center" /> **Java 17 LTS** | Runtime OpenJDK con alto rendimiento y soporte empresarial |
-| **Base de Datos** | <img src="https://skillicons.dev/icons?i=mysql" width="22" height="22" align="center" /> **MySQL 8.0** | Motor de base de datos relacional con bloqueo pesimista e índices |
-| **ORM & Persistencia** | <img src="https://skillicons.dev/icons?i=hibernate" width="22" height="22" align="center" /> **Hibernate JPA** | Mapeo objeto-relacional y gestión transaccional |
-| **Autenticación** | <img src="https://cdn.simpleicons.org/jsonwebtokens/D63AFF" width="22" height="22" align="center" /> **JWT (JSON Web Tokens)** | Autenticación stateless segura con expiración y roles |
-| **Teleconsulta** | <img src="https://cdn.simpleicons.org/agora/099DFD" width="22" height="22" align="center" /> **Agora RTC SDK** | Videollamadas seguras WebRTC de alta definición en tiempo real |
-| **IA / Accesibilidad** | <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="22" height="22" align="center" /> **Deepgram AI** | Transcripción de voz a texto en vivo (subtítulos) y comandos |
-| **Chatbot con IA** | <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="22" height="22" align="center" /> **Google Gemini API** | Asistente de salud virtual inteligente 24/7 con IA generativa |
-| **Mapas Interactivos** | <img src="https://cdn.simpleicons.org/leaflet/199900" width="22" height="22" align="center" /> **Leaflet / OSM** | Ubicación geográfica interactiva de clínicas y sedes |
-| **Pasarela de Pagos** | <img src="https://cdn.simpleicons.org/stripe/635BFF" width="22" height="22" align="center" /> **Stripe** | Procesamiento seguro de pagos en línea con tarjeta |
-| **Gestión de Imágenes** | <img src="https://cdn.simpleicons.org/cloudinary/3448C5" width="22" height="22" align="center" /> **Cloudinary** | Almacenamiento en la nube y optimización de fotos de perfil |
-| **Correos y Notificaciones** | <img src="https://cdn.simpleicons.org/gmail/EA4335" width="22" height="22" align="center" /> **Gmail SMTP & Twilio** | Envío de confirmaciones por correo electrónico y WhatsApp |
-| **Infraestructura Cloud** | <img src="https://cdn.simpleicons.org/railway/BD00FF" width="22" height="22" align="center" /> **Railway** | Despliegue en la nube con HTTPS/SSL y conexión gestionada |
+| **Frontend** | <a href="https://angular.dev/" target="_blank"><img src="https://skillicons.dev/icons?i=angular" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Angular 19**](https://angular.dev/) | Framework SPA reactivo y modular para la interfaz de usuario |
+| **Lenguaje Frontend** | <a href="https://www.typescriptlang.org/" target="_blank"><img src="https://skillicons.dev/icons?i=ts" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**TypeScript 5.5**](https://www.typescriptlang.org/) | Tipado estático y escalabilidad en lógica de cliente |
+| **Backend** | <a href="https://spring.io/projects/spring-boot" target="_blank"><img src="https://skillicons.dev/icons?i=spring" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Spring Boot 3.2**](https://spring.io/projects/spring-boot) | Framework REST API, seguridad e inyección de dependencias |
+| **Runtime Backend** | <a href="https://openjdk.org/" target="_blank"><img src="https://skillicons.dev/icons?i=java" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Java 17 LTS**](https://openjdk.org/) | Runtime OpenJDK con alto rendimiento y soporte empresarial |
+| **Base de Datos** | <a href="https://www.mysql.com/" target="_blank"><img src="https://skillicons.dev/icons?i=mysql" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**MySQL 8.0**](https://www.mysql.com/) | Motor de base de datos relacional con bloqueo pesimista e índices |
+| **ORM & Persistencia** | <a href="https://hibernate.org/" target="_blank"><img src="https://skillicons.dev/icons?i=hibernate" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Hibernate JPA**](https://hibernate.org/) | Mapeo objeto-relacional y gestión transaccional |
+| **Autenticación** | <a href="https://jwt.io/" target="_blank"><img src="https://cdn.simpleicons.org/jsonwebtokens/D63AFF" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**JWT (JSON Web Tokens)**](https://jwt.io/) | Autenticación stateless segura con expiración y roles |
+| **Teleconsulta** | <a href="https://www.agora.io/" target="_blank"><img src="https://cdn.simpleicons.org/agora/099DFD" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Agora RTC SDK**](https://www.agora.io/) | Videollamadas seguras WebRTC de alta definición en tiempo real |
+| **IA / Accesibilidad** | <a href="https://deepgram.com/" target="_blank"><img src="https://cdn.simpleicons.org/deepgram/13EF93" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Deepgram AI**](https://deepgram.com/) | Transcripción de voz a texto en vivo (subtítulos) y comandos |
+| **Chatbot con IA** | <a href="https://ai.google.dev/" target="_blank"><img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Google Gemini API**](https://ai.google.dev/) | Asistente de salud virtual inteligente 24/7 con IA generativa |
+| **Mapas Interactivos** | <a href="https://leafletjs.com/" target="_blank"><img src="https://cdn.simpleicons.org/leaflet/199900" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Leaflet / OSM**](https://leafletjs.com/) | Ubicación geográfica interactiva de clínicas y sedes |
+| **Pasarela de Pagos** | <a href="https://stripe.com/" target="_blank"><img src="https://cdn.simpleicons.org/stripe/635BFF" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Stripe**](https://stripe.com/) | Procesamiento seguro de pagos en línea con tarjeta |
+| **Gestión de Imágenes** | <a href="https://cloudinary.com/" target="_blank"><img src="https://cdn.simpleicons.org/cloudinary/3448C5" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Cloudinary**](https://cloudinary.com/) | Almacenamiento en la nube y optimización de fotos de perfil |
+| **Correos y Notificaciones** | <a href="https://mail.google.com/" target="_blank"><img src="https://cdn.simpleicons.org/gmail/EA4335" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Gmail SMTP & Twilio**](https://www.twilio.com/) | Envío de confirmaciones por correo electrónico y WhatsApp |
+| **Infraestructura Cloud** | <a href="https://railway.app/" target="_blank"><img src="https://cdn.simpleicons.org/railway/BD00FF" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Railway**](https://railway.app/) | Despliegue en la nube con HTTPS/SSL y conexión gestionada |
 
 ---
 
@@ -97,19 +100,19 @@ La arquitectura de **RETO SALUD** está diseñada bajo un enfoque moderno y desa
 
 ## Características Principales
 
-### <img src="https://cdn.simpleicons.org/agora/099DFD" width="20" height="20" align="center" /> Telemedicina Integrada
+### <img src="https://cdn.simpleicons.org/agora/099DFD" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Telemedicina Integrada
 * Videollamadas seguras WebRTC punto a punto mediante **Agora SDK**.
 * Opciones completas de interacción: mutear micrófono, apagar cámara y finalizar sesión de consulta.
 
-### <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="20" height="20" align="center" /> Accesibilidad Avanzada
+### <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Accesibilidad Avanzada
 * **Subtítulos en Vivo:** Transcripción de voz a texto en tiempo real con **Deepgram** orientada a personas con dificultades auditivas.
 * **Navegación por Voz:** Dictado de comandos e información directamente desde el navegador.
 
-### <img src="https://cdn.simpleicons.org/stripe/635BFF" width="20" height="20" align="center" /> Integración de Pagos
+### <img src="https://cdn.simpleicons.org/stripe/635BFF" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Integración de Pagos
 * Checkout integrado con **Stripe Elements** para pagos con tarjeta.
 * Soporte nativo para registro y emisión de comprobantes en pagos en efectivo.
 
-### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="20" height="20" align="center" /> Chatbot Inteligente
+### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Chatbot Inteligente
 * Asistente virtual de salud impulsado por la API de **Google Gemini**.
 * Respuestas contextuales inmediatas a preguntas frecuentes de los pacientes.
 
@@ -233,37 +236,37 @@ El frontend estará disponible en: `http://localhost:4200`
 
 ## Configuración de Servicios Externos
 
-### <img src="https://cdn.simpleicons.org/stripe/635BFF" width="20" height="20" align="center" /> Stripe (Pagos)
+### <img src="https://cdn.simpleicons.org/stripe/635BFF" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Stripe (Pagos)
 1. Crear cuenta en [Stripe](https://stripe.com/).
 2. Obtener las claves de prueba (`Publishable key` y `Secret key`) desde el Dashboard.
 3. Configurar `stripe.secret-key` en el Backend y la clave pública en `stripe.config.ts`.
 
-### <img src="https://cdn.simpleicons.org/gmail/EA4335" width="20" height="20" align="center" /> Gmail SMTP (Correos)
+### <img src="https://cdn.simpleicons.org/gmail/EA4335" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Gmail SMTP (Correos)
 1. Habilitar autenticación en 2 pasos en tu cuenta de Google.
 2. Generar una **Contraseña de aplicación** desde la seguridad de la cuenta.
 3. Configurar `spring.mail.username` y `spring.mail.password` en `application.properties`.
 
-### <img src="https://cdn.simpleicons.org/cloudinary/3448C5" width="20" height="20" align="center" /> Cloudinary (Imágenes)
+### <img src="https://cdn.simpleicons.org/cloudinary/3448C5" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Cloudinary (Imágenes)
 1. Crear cuenta gratuita en [Cloudinary](https://cloudinary.com/).
 2. Obtener Cloud Name, API Key y API Secret desde la consola.
 3. Configurar en `application.properties`.
 
-### <img src="https://cdn.simpleicons.org/agora/099DFD" width="20" height="20" align="center" /> Agora SDK (Videollamadas)
+### <img src="https://cdn.simpleicons.org/agora/099DFD" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Agora SDK (Videollamadas)
 1. Crear cuenta en [Agora Console](https://console.agora.io/).
 2. Crear un proyecto y habilitar el modo **App Certificate**.
 3. Configurar `agora.appId` y `agora.appCertificate` en `application.properties`.
 
-### <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="20" height="20" align="center" /> Deepgram (Transcripción por Voz)
+### <img src="https://cdn.simpleicons.org/deepgram/13EF93" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Deepgram (Transcripción por Voz)
 1. Crear cuenta en [Deepgram](https://deepgram.com/).
 2. Generar una **API Key** desde la consola.
 3. Configurar `deepgram.apiKey` en `application.properties`.
 
-### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="20" height="20" align="center" /> Gemini API (Chatbot)
+### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Gemini API (Chatbot)
 1. Acceder a [Google AI Studio](https://aistudio.google.com/).
 2. Generar una **API Key** para modelos Gemini.
 3. Configurar `GEMINI_API_KEY` en `application.properties`.
 
-### <img src="https://skillicons.dev/icons?i=gcp" width="20" height="20" align="center" /> Google Cloud Console (Autenticación)
+### <img src="https://skillicons.dev/icons?i=gcp" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Google Cloud Console (Autenticación)
 1. Crear un proyecto en [Google Cloud Console](https://console.cloud.google.com/).
 2. Configurar la pantalla de consentimiento y generar credenciales **OAuth 2.0 Client ID**.
 3. Configurar `google.client.id` en `application.properties`.
