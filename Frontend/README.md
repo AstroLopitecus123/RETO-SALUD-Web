@@ -1,159 +1,239 @@
-# RETO SALUD - Frontend (Angular)
+# Frontend - RETO SALUD
 
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="../assets/RETO%20SALUD%20FRONTEND-blanco.png">
     <source media="(prefers-color-scheme: light)" srcset="../assets/RETO%20SALUD%20FRONTEND.png">
-    <img alt="Logo RETO SALUD Frontend" src="../assets/RETO%20SALUD%20FRONTEND.png" width="500">
+    <img alt="Logo RETO SALUD Frontend" src="../assets/RETO%20SALUD%20FRONTEND.png" width="520">
   </picture>
+
+  <h3>Single Page Application (SPA) Accesible, Inclusiva y de Alto Rendimiento</h3>
+
+  [![Angular](https://img.shields.io/badge/Angular-19.1-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Cypress](https://img.shields.io/badge/Cypress-15.x-69D3A7?style=for-the-badge&logo=cypress&logoColor=white)](https://www.cypress.io/)
+  [![Axe-core](https://img.shields.io/badge/Axe--core-WCAG_2.1_AA-blueviolet?style=for-the-badge)](https://www.deque.com/axe/)
+  [![Agora](https://img.shields.io/badge/Agora_RTC-4.24-099DFD?style=for-the-badge&logo=agora&logoColor=white)](https://www.agora.io/)
+  [![Stripe](https://img.shields.io/badge/Stripe-Elements-635BFF?style=for-the-badge&logo=stripe&logoColor=white)](https://stripe.com/)
+
+  <br/>
+
+  **[Sitio Web](https://www.reto-salud.online)** • **[Arquitectura](#arquitectura-del-frontend)** • **[Stack Tecnológico](#stack-tecnológico)** • **[Estructura](#estructura-del-proyecto)** • **[Rutas](#rutas-de-la-aplicación)** • **[Accesibilidad A11y](#características-especiales-de-accesibilidad)** • **[Calidad y Testing](#calidad-de-software-y-pruebas)** • **[Instalación](#instalación-y-configuración)** • **[README Principal](../README.md)**
+
 </div>
 
-El frontend de **RETO SALUD** es una Single Page Application (SPA) desarrollada en Angular, enfocada en brindar una experiencia fluida, accesible y segura tanto para pacientes como para personal médico y administrativo de la clínica.
+---
+
+## Descripción General
+
+El **Frontend de RETO SALUD** es una Single Page Application (SPA) modular y reactiva desarrollada con **Angular 19** y **TypeScript 5.7**. Diseñada bajo estándares de inclusión universal (**A11y WCAG 2.1 AA**), ofrece interfaces adaptativas para pacientes, médicos, personal de recepción y administradores, integrando telemedicina WebRTC en vivo, subtítulos asistidos por inteligencia artificial, checkout seguro con Stripe y asistente conversacional inteligente con Google Gemini.
+
+---
 
 ## Arquitectura del Frontend
 
+El cliente opera como una aplicación web desacoplada que consume la API REST del backend mediante servicios reactivos basados en **RxJS** e interceptores HTTP para el control de sesiones JWT:
+
 <div align="center">
-  <img alt="Arquitectura del Frontend" src="../assets/arquitectura_frontend.png" width="800">
+  <img alt="Arquitectura del Frontend RETO SALUD" src="../assets/arquitectura_frontend.png" width="850">
 </div>
+
+---
 
 ## Stack Tecnológico
 
-| Componente | Tecnología | Versión | Decoradores Principales |
-|------------|------------|---------|-------------------------|
-| **Framework** | Angular | 17+ | `@Component`, `@Injectable` |
-| **Reactive** | RxJS | 7.x | `Observable`, `Subject`, `BehaviorSubject` |
-| **HTTP** | Angular HTTP | 17+ | `HttpClient`, `HttpInterceptorFn` |
-| **Routing** | Angular Router | 17+ | `Routes`, `CanActivateFn` |
-| **Videollamadas** | Agora SDK Web | 4.x | Conexión P2P en `teleconsulta` |
-| **Accesibilidad** | Deepgram | V1 | WebSockets, Transcripción Voz a Texto |
-| **Pagos** | Stripe.js | 3.x | `StripeElements`, `PaymentIntent` |
-| **Mapas** | Leaflet | 1.x | `L.map`, `L.tileLayer` |
+| Componente | Tecnología | Versión | Propósito | Patrones / Decoradores Clave |
+| :--- | :--- | :---: | :--- | :--- |
+| **Framework Base** | <a href="https://angular.dev/" target="_blank"><img src="https://skillicons.dev/icons?i=angular" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Angular**](https://angular.dev/) | 19.1 | Arquitectura modular de componentes, directivas y servicios SPA | `@Component`, `@Injectable`, `@NgModule` |
+| **Lenguaje Frontend** | <a href="https://www.typescriptlang.org/" target="_blank"><img src="https://skillicons.dev/icons?i=ts" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**TypeScript**](https://www.typescriptlang.org/) | 5.7 | Tipado estático estricto, interfaces DTO y seguridad en tiempo de compilación | Tipos genéricos, Interfaces, Enums |
+| **Programación Reactiva** | <a href="https://rxjs.dev/" target="_blank"><img src="https://skillicons.dev/icons?i=rxjs" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**RxJS**](https://rxjs.dev/) | 7.8 | Manejo asíncrono de flujos de datos, eventos y estado compartido | `Observable`, `BehaviorSubject`, `pipe()`, `map()` |
+| **Comunicaciones HTTP** | <a href="https://angular.dev/" target="_blank"><img src="https://skillicons.dev/icons?i=angular" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Angular HTTP Client**](https://angular.dev/) | 19.1 | Consumo de la API REST con inyección automática de tokens Bearer JWT | `HttpClient`, `HttpInterceptorFn` |
+| **Enrutamiento y Seguridad**| <a href="https://angular.dev/" target="_blank"><img src="https://skillicons.dev/icons?i=angular" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Angular Router**](https://angular.dev/) | 19.1 | Navegación entre vistas y protección de rutas según roles (RBAC) | `Routes`, `CanActivateFn`, `RouterLink` |
+| **Teleconsulta WebRTC** | <a href="https://www.agora.io/" target="_blank"><img src="https://cdn.simpleicons.org/agora/099DFD" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Agora RTC SDK NG**](https://www.agora.io/) | 4.24 | Conexión multimedia punto a punto de audio/video de baja latencia | `IAgoraRTCClient`, `createCameraVideoTrack` |
+| **Transcripción por Voz** | <a href="https://deepgram.com/" target="_blank"><img src="https://cdn.simpleicons.org/deepgram/13EF93" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Deepgram SDK**](https://deepgram.com/) | 5.0 | Transcripción de voz a texto en vivo mediante WebSockets | Live Transcription, Audio Streaming |
+| **Pasarela de Pagos** | <a href="https://stripe.com/" target="_blank"><img src="https://cdn.simpleicons.org/stripe/635BFF" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Stripe.js**](https://stripe.com/) | 9.2 | Checkout seguro con tarjeta validado por Stripe Elements | `loadStripe`, `StripeCardElement` |
+| **Mapas Interactivos** | <a href="https://leafletjs.com/" target="_blank"><img src="https://cdn.simpleicons.org/leaflet/199900" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Leaflet**](https://leafletjs.com/) | 1.9 | Renderizado de mapas y geolocalización de sedes médicas | `L.map`, `L.tileLayer`, `L.marker` |
+| **Generación de PDFs** | <a href="https://github.com/parallax/jsPDF" target="_blank"><img src="https://skillicons.dev/icons?i=js" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**jsPDF & AutoTable**](https://github.com/parallax/jsPDF) | 4.2 | Emisión y descarga en cliente de comprobantes y recetas médicas | `jsPDF`, `autoTable` |
+
+---
 
 ## Estructura del Proyecto
 
+La aplicación se organiza bajo una arquitectura modular limpia por responsabilidades:
+
 <div align="center">
-  <img alt="Estructura de Directorios" src="../assets/estructura_frontend.png" width="800">
+  <img alt="Estructura de Directorios del Frontend" src="../assets/estructura_frontend.png" width="850">
 </div>
+
+### Desglose de Carpetas Principales (`src/app/`)
+
+* **`components/`:** Vistas y componentes visuales reutilizables categorizados por módulo (autenticación, teleconsulta, checkout, paneles de pacientes, médicos y administración).
+* **`services/`:** Servicios singleton inyectables (`@Injectable`) que concentran la lógica de comunicación con la API REST (citas, autenticación, pagos, videollamadas, accesibilidad).
+* **`guards/`:** Guardianes de ruta funcionales (`CanActivateFn`) que validan la autenticación y los roles permitidos antes de autorizar la navegación.
+* **`config/`:** Configuraciones globales de clientes de terceros (claves de Stripe, parámetros de Agora).
+* **`environments/`:** Definición de variables de entorno (URL base de la API y llaves públicas de servicios).
+
+---
 
 ## Rutas de la Aplicación
 
-### Rutas Públicas
-- `/` - Landing page (R.E.T.O Salud)
-- `/login` - Inicio de sesión
-- `/registrar` - Registro de usuario
-- `/auth/google/callback` - Callback de autenticación con Google OAuth
-- `/recuperar` - Recuperación de contraseña
-- `/restablecer` - Restablecer contraseña con token
-- `/trabaja-con-nosotros` - Oportunidades de empleo
+La navegación está resguardada por guardianes perimetrales que previenen accesos no autorizados:
 
-### Rutas de Paciente
-- `/paciente/dashboard` - Panel de control del paciente (`PacienteGuard`)
-- `/mis-citas` - Gestión y detalle de citas (`AuthGuard`)
-- `/mi-perfil` - Perfil del usuario (`AuthGuard`)
-- `/historial-clinico` - Historial médico y expediente (`AuthGuard`)
-- `/mi-historial` - Historial de pagos (`AuthGuard`)
-- `/notificaciones` - Bandeja de notificaciones (`AuthGuard`)
-- `/teleconsulta/:id` - Sala de videollamada (`AuthGuard`)
-- `/checkout/:id` - Resumen previo al proceso de pago (`AuthGuard`)
-- `/pagar-efectivo/:id` - Flujo para pago manual en sucursal (`AuthGuard`)
-- `/pagar-tarjeta/:id` - Flujo para pago en línea con Stripe (`AuthGuard`)
+### 1. Rutas Públicas (Sin Autenticación)
+| Ruta | Descripción | Acceso |
+| :--- | :--- | :--- |
+| `/` | Landing page oficial informativa de R.E.T.O Salud | Público |
+| `/login` | Formulario de autenticación (correo/contraseña y Google Sign-In) | Público |
+| `/registrar` | Registro interactivo para nuevos pacientes | Público |
+| `/auth/google/callback` | Callback para el procesamiento del token OAuth de Google | Público |
+| `/recuperar` | Solicitud de enlace para restablecimiento de contraseña | Público |
+| `/restablecer` | Formulario para ingresar nueva contraseña con token | Público |
+| `/trabaja-con-nosotros` | Formulario de postulación laboral médica y administrativa | Público |
 
-### Rutas de Médico
-- `/medico/dashboard` - Panel exclusivo para doctores (`MedicoGuard`)
-- `/medico/agenda` - Agenda de citas del médico (`MedicoGuard`)
-- `/medico/pagos` - Ingresos generados (`MedicoGuard`)
-- `/gestionar-disponibilidad/:id` - Horarios de atención (`MedicoGuard`)
+### 2. Panel del Paciente (Protegido por `PacienteGuard` / `AuthGuard`)
+| Ruta | Descripción | Guard |
+| :--- | :--- | :--- |
+| `/paciente/dashboard` | Tablero principal con accesos rápidos y estado de salud | `PacienteGuard` |
+| `/mis-citas` | Agenda y gestión de citas programadas, pasadas o en reprogramación | `AuthGuard` |
+| `/mi-perfil` | Edición de datos personales, avatar y configuración de accesibilidad | `AuthGuard` |
+| `/historial-clinico` | Consulta de diagnósticos médicos, recetas emitidas y notas de evolución | `AuthGuard` |
+| `/mi-historial` | Historial de transacciones y descarga de comprobantes | `AuthGuard` |
+| `/notificaciones` | Centro de avisos y recordatorios de citas | `AuthGuard` |
+| `/teleconsulta/:id` | Sala virtual de videollamada interactiva con subtitulado en vivo | `AuthGuard` |
+| `/checkout/:id` | Resumen de servicio médico antes de procesar el pago | `AuthGuard` |
+| `/pagar-tarjeta/:id` | Pasarela de pago en línea mediante Stripe Elements | `AuthGuard` |
+| `/pagar-efectivo/:id` | Registro de promesa de pago presencial en sede | `AuthGuard` |
 
-### Rutas de Recepción
-- `/recepcion/dashboard` - Panel para el área de recepción (`RecepcionGuard`)
-- `/recepcion/pagos` - Control de pagos en sucursal (`RecepcionGuard`)
+### 3. Panel del Médico (Protegido por `MedicoGuard`)
+| Ruta | Descripción | Guard |
+| :--- | :--- | :--- |
+| `/medico/dashboard` | Resumen de consultas del día y métricas de atención | `MedicoGuard` |
+| `/medico/agenda` | Calendario detallado de pacientes agendados y confirmados | `MedicoGuard` |
+| `/medico/pagos` | Control de liquidación de honorarios e ingresos generados | `MedicoGuard` |
+| `/gestionar-disponibilidad/:id` | Configuración y apertura de bloques de atención por fecha y hora | `MedicoGuard` |
 
-### Rutas de Administración
-- `/admin` - Panel principal de administración (`AdminGuard`)
-- `/usuarios` - Gestión de usuarios (`AdminGuard`)
-- `/medicos` - Gestión de personal médico (`AdminGuard`)
-- `/especialidades` - Catálogo de especialidades (`AdminGuard`)
-- `/admin/pagos` - Control general de todos los pagos (`AdminGuard`)
-- `/admin/gestion-citas` - Supervisión general de citas (`AdminGuard`)
-- `/admin/solicitudes` - Aspirantes de empleo (`AdminGuard`)
-- `/admin/notificaciones` - Envío de avisos y alertas globales (`AdminGuard`)
+### 4. Panel de Recepción (Protegido por `RecepcionGuard`)
+| Ruta | Descripción | Guard |
+| :--- | :--- | :--- |
+| `/recepcion/dashboard` | Gestión ágil de llegada de pacientes y citas asistidas | `RecepcionGuard` |
+| `/recepcion/pagos` | Validación y cobro manual de comprobantes en caja física | `RecepcionGuard` |
 
-## Configuración
+### 5. Panel Administrativo (Protegido por `AdminGuard`)
+| Ruta | Descripción | Guard |
+| :--- | :--- | :--- |
+| `/admin` | Centro de control global de la clínica | `AdminGuard` |
+| `/usuarios` | Mantenimiento, activación y bloqueo de cuentas de usuario | `AdminGuard` |
+| `/medicos` | Alta y asignación de especialidades al staff médico | `AdminGuard` |
+| `/especialidades` | Catálogo de especialidades médicas y tarifas asociadas | `AdminGuard` |
+| `/admin/gestion-citas` | Supervisión general de citas y resolución de reprogramaciones | `AdminGuard` |
+| `/admin/pagos` | Auditoría financiera global de transacciones | `AdminGuard` |
+| `/admin/solicitudes` | Revisión y aprobación de postulaciones laborales | `AdminGuard` |
+| `/admin/notificaciones` | Emisión de comunicados globales a todo el sistema | `AdminGuard` |
 
-### API Base URL
-Configurado en `environments/environment.ts`:
+---
 
-```typescript
-export const environment = {
-  production: true,
-  apiUrl: 'https://api.tu-dominio.com/v1'
-};
-```
+## Características Especiales de Accesibilidad
 
-### Stripe (Pasarela de Pagos)
-Clave pública configurada en `config/stripe.config.ts`:
+La plataforma está diseñada bajo un enfoque de **Inclusión Universal (A11y)**, implementando herramientas para garantizar autonomía a usuarios con diferentes capacidades:
 
-```typescript
-export const STRIPE_CONFIG = {
-  publishableKey: 'pk_test_tu_clave_publica_stripe...'
-};
-```
+| Categoría | Funcionalidades Principales | Beneficio y Estándar |
+| :--- | :--- | :--- |
+| **Visión y Daltonismo** | Filtros cromáticos integrados (Deuteranopia, Protanopia, Tritanopia, Escala de grises). Incluye un **Test de Ishihara** interactivo para calibrar el perfil ideal automáticamente. | Garantiza diferenciación de contrastes según pautas **WCAG 2.1**. |
+| **Audio y Voz (IA)** | **Comandos de voz** para navegación, **narrador auditivo** de imágenes y contenido, y subtítulos automáticos en teleconsultas con **Deepgram AI**. | Facilita la operación a pacientes con discapacidad visual, auditiva o motriz. |
+| **Asistente Virtual** | **Chatbot médico conversacional** (Google Gemini) para triage de consultas, orientación administrativa y soporte continuo 24/7. | Asistencia inmediata sin fricción cognitiva. |
+| **Escalado de Interfaz** | Selector dinámico de zoom y escala tipográfica (hasta 200%+ sin pérdida de maquetación). | Lectura confortable para usuarios con baja visión o fatiga ocular. |
+| **Modo Alto Contraste** | Paleta de contraste reforzado para maximizar la legibilidad de textos, íconos y bordes interactivos. | Cumple con ratio de contraste mínimo 4.5:1 exigido por WCAG AA. |
+| **Navegación por Teclado Pro** | Resaltado de foco ultra-visible, orden de tabulación intuitivo (`Tab` / `Shift+Tab`) y confirmación con `Enter`. | Operabilidad total de la plataforma sin requerir ratón. |
 
-### Variables de Entorno
-El frontend requiere conectarse al backend a través de la variable `apiUrl`. En producción, apunta a tu servidor en la nube (ej. Railway, AWS, Render). Para desarrollo local, crear o editar `environment.development.ts` apuntando a `http://localhost:8080/api/v1`.
+---
 
-### Servicios de Terceros
-- **Agora SDK**: Configurar App ID en el componente de teleconsulta.
-- **Deepgram API**: Configurar API Key en el servicio de accesibilidad de voz para la transcripción en vivo.
+## Calidad de Software y Pruebas
 
-## Prerrequisitos
+El frontend implementa una estrategia rigurosa de calidad que combina auditorías automatizadas de accesibilidad sobre el DOM y pruebas unitarias de componentes:
 
-- Node.js 18 o superior
-- Angular CLI 17 o superior
-- npm 9 o superior
+### 1. Matriz de Aseguramiento de Calidad en Frontend
 
-## Instalación
+| Dimensión de Prueba | Framework / Herramienta | Archivos / Especificación | Alcance y Criterio |
+| :--- | :--- | :--- | :--- |
+| **Accesibilidad Web (A11y)** | <a href="https://www.cypress.io/" target="_blank"><img src="https://cdn.simpleicons.org/cypress/69D3A7" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Cypress**](https://www.cypress.io/) + [**Axe-core**](https://www.deque.com/axe/) | `cypress/e2e/accesibilidad.cy.ts` | **7 suites automatizadas:** Landing Page, Iniciar Sesión, Dashboard Mi Panel, Mis Citas, Historial Clínico, Notificaciones y Mi Perfil, verificando **0 violaciones** bajo **WCAG 2.1 (Nivel AA)**. |
+| **Pruebas Unitarias** | <a href="https://jasmine.github.io/" target="_blank"><img src="https://cdn.simpleicons.org/jasmine/8A4182" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Jasmine**](https://jasmine.github.io/) + [**Karma**](https://karma-runner.github.io/) | `src/**/*.spec.ts` | Pruebas unitarias de componentes, servicios e inyección de dependencias. |
+| **Rendimiento y Core Web Vitals** | <a href="https://pagespeed.web.dev/" target="_blank"><img src="https://cdn.simpleicons.org/google/4285F4" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Google Lighthouse**](https://pagespeed.web.dev/) | Pipeline CI/CD en producción | Puntuación **98/100 en Performance** y **100/100 en Accesibilidad** en [reto-salud.online](https://www.reto-salud.online). |
 
-### 1. Clonar e instalar dependencias
+### 2. Comandos para Ejecución de Pruebas
+
+* **Ejecutar auditoría de accesibilidad con interfaz gráfica (Cypress UI):**
+  ```bash
+  npm run test:a11y
+  ```
+
+* **Ejecutar auditoría de accesibilidad en modo headless (terminal / CI):**
+  ```bash
+  npm run test:a11y:headless
+  ```
+  *(O ejecutar directamente el spec: `npx cypress run --spec "cypress/e2e/accesibilidad.cy.ts"`)*
+
+* **Ejecutar pruebas unitarias de componentes con Karma:**
+  ```bash
+  npm test
+  ```
+
+---
+
+## Instalación y Configuración
+
+### Prerrequisitos
+
+* **Node.js 20.x o 22.x LTS** (`node -v`)
+* **npm 10.x** o superior (`npm -v`)
+* **Angular CLI 19** (`npm install -g @angular/cli`)
+
+### 1. Clonar e Instalar Dependencias
+
+Navegar a la carpeta del frontend e instalar los paquetes de `package.json`:
 
 ```bash
 cd Frontend
 npm install
 ```
 
-### 2. Configuración del Entorno
+### 2. Configurar Variables de Entorno
 
-Navega a `src/environments/` y edita `environment.ts` o `environment.development.ts`:
+Revisar o editar el archivo `src/environments/environment.ts` con la URL del Backend:
 
 ```typescript
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080/api/v1',
-  stripePublicKey: 'pk_test_tu_clave_publica_stripe'
+  apiUrl: 'http://localhost:8080' // Base URL del servidor Spring Boot
 };
 ```
 
-### 3. Ejecutar en desarrollo
+*(Las credenciales públicas de Stripe se configuran en `src/app/config/stripe.config.ts`)*.
+
+### 3. Ejecutar en Modo Desarrollo
+
+Levantar el servidor local de desarrollo de Angular:
 
 ```bash
 ng serve -o
 ```
 
-La aplicación se abrirá automáticamente y estará disponible en: `http://localhost:4200`
+La aplicación se compilará y abrirá automáticamente en tu navegador en:
+```
+http://localhost:4200
+```
 
-## Características Especiales de Accesibilidad
+### 4. Compilar para Producción
 
-> [!TIP]
-> **Plataforma 100% Inclusiva e Integración con IA**  
-> La aplicación está diseñada pensando en la inclusión total, ofreciendo un panel de accesibilidad avanzado con múltiples perfiles y herramientas de última generación.
+Para generar el bundle optimizado para despliegue:
 
-### Panel de Accesibilidad Integral
+```bash
+ng build --configuration production
+```
 
-| Categoría | Funcionalidades Principales | Beneficio |
-|:---:|---|---|
-| **Visión y Daltonismo** | Filtros especializados (Deuteranopia, Protanopia, Tritanopia, Escala de grises). Incluye un **Test Rápido (Ishihara)** interactivo para autoconfigurar el perfil ideal. | Adapta la paleta de colores para pacientes con diferentes tipos de daltonismo o debilidad visual. |
-| **Audio y Voz (IA)** | **Comandos de Voz** (Deepgram), **Narrador de Imágenes/Página**, **Sonidos del Sistema** y transcripción en vivo (subtítulos) durante teleconsultas. | Indispensable para personas con discapacidad visual, auditiva o motriz. |
-| **Asistente Virtual** | **Chatbot inteligente** conversacional integrado para resolver dudas, guiar en la navegación y brindar soporte 24/7. | Reduce tiempos de espera y proporciona asistencia inmediata y automatizada a los pacientes. |
-| **Zoom y Escala** | Control dinámico del tamaño de la interfaz gráfica y la tipografía (hasta 200%+). | Facilita la lectura para usuarios con vista cansada o baja visión. |
-| **Contraste** | **Modo Alto Contraste** para mejorar legibilidad de textos/bordes, y opciones para **personalizar colores** de fondo y texto. | Reduce la fatiga visual y adapta la interfaz a sensibilidades lumínicas específicas. |
-| **Navegación por Teclado** | **Modo Teclado Pro** con resaltado de foco ultra-visible. Soporte nativo para navegar con `Flechas`/`Tab` y confirmar con `Enter`. | Permite el uso fluido y rápido de la plataforma sin necesidad de un ratón. |
+Los artefactos listos para producción se generarán en la carpeta `dist/`.
+
+---
+
+<div align="center">
+  <sub>Desarrollado para la plataforma <b>RETO SALUD</b> • Consulta el <a href="../README.md">README General del Proyecto</a></sub>
+</div>

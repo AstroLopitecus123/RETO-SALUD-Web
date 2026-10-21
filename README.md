@@ -18,20 +18,8 @@
 
 <br/>
 
-**[Sitio Web Oficial](https://www.reto-salud.online)** • **[Rendimiento](#rendimiento-y-auditoría-lighthouse)** • **[Arquitectura](#arquitectura-general)** • **[Stack Tecnológico](#stack-tecnológico)** • **[Roles](#roles-y-funcionalidades)** • **[Instalación](#instalación-y-configuración)** • **[Documentación](#documentación-adicional)**
+**[Sitio Web Oficial](https://www.reto-salud.online)** • **[Arquitectura](#arquitectura-general)** • **[Stack Tecnológico](#stack-tecnológico)** • **[Roles](#roles-y-funcionalidades)** • **[Calidad y Testing](#calidad-de-software-y-pruebas)** • **[Instalación](#instalación-y-configuración)** • **[Documentación](#documentación-adicional)**
 
-</div>
-
----
-
-## Rendimiento y Auditoría (Lighthouse)
-
-<div align="center">
-  <p>Análisis en tiempo real de <b><a href="https://www.reto-salud.online/" target="_blank">RETO Salud</a></b></p>
-  <a href="https://pagespeed.web.dev/analysis/https-www-reto-salud-online/g94v7r8ncc?form_factor=desktop" target="_blank" title="Ver informe oficial en vivo de Google PageSpeed Insights">
-    <img src="./assets/pagespeed.svg?v=2" alt="Métricas PageSpeed RETO Salud" />
-  </a>
-  <p><small><i>Haz clic en los círculos para ver la auditoría en vivo en <b>Google PageSpeed Insights</b></i></small></p>
 </div>
 
 ---
@@ -115,6 +103,31 @@ La arquitectura de **RETO SALUD** está diseñada bajo un enfoque moderno y desa
 ### <img src="https://cdn.simpleicons.org/googlegemini/8E75B2" width="22" height="22" align="absmiddle" />&nbsp;&nbsp;Chatbot Inteligente
 * Asistente virtual de salud impulsado por la API de **Google Gemini**.
 * Respuestas contextuales inmediatas a preguntas frecuentes de los pacientes.
+
+---
+
+## Calidad de Software y Pruebas
+
+Para garantizar alta confiabilidad, seguridad y accesibilidad universal, el proyecto implementa una estrategia integral de **Aseguramiento de la Calidad (QA)** que cubre pruebas de extremo a extremo, accesibilidad estandarizada, análisis estático de código y auditoría continua de rendimiento web:
+
+### Matriz de Aseguramiento de Calidad (QA)
+
+| Dimensión de Calidad | Herramienta / Framework | Enfoque y Alcance | Estándar / Criterio |
+| :--- | :--- | :--- | :--- |
+| **Pruebas E2E y Funcionales** | <a href="https://www.selenium.dev/" target="_blank"><img src="https://cdn.simpleicons.org/selenium/43B02A" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Selenium WebDriver**](https://www.selenium.dev/) | Automatización de flujos críticos de usuario (reserva de citas médicas, checkout con Stripe, teleconsulta en vivo y autenticación). | Cobertura de flujos completos en navegador |
+| **Accesibilidad Web (A11y)** | <a href="https://www.cypress.io/" target="_blank"><img src="https://cdn.simpleicons.org/cypress/69D3A7" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Cypress**](https://www.cypress.io/) + [**Axe-core**](https://www.deque.com/axe/) | Auditoría automatizada sobre el DOM para validar contraste cromático, navegación por teclado, soporte a lectores de pantalla y atributos ARIA. | Pautas internacionales **WCAG 2.1 (Nivel AA)** |
+| **Análisis Estático y Deuda Técnica** | <a href="https://www.sonarsource.com/products/sonarqube/" target="_blank"><img src="https://cdn.simpleicons.org/sonar/4E9BCD" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**SonarQube**](https://www.sonarsource.com/products/sonarqube/) | Inspección continua de código para detección temprana de Bugs, Code Smells, Hotspots de seguridad y control de cobertura en servicios. | Clean Code, 0 Vulnerabilidades OWASP |
+| **Rendimiento y Core Web Vitals** | <a href="https://pagespeed.web.dev/" target="_blank"><img src="https://cdn.simpleicons.org/google/4285F4" width="20" height="20" align="absmiddle" /></a>&nbsp;&nbsp;[**Google PageSpeed**](https://pagespeed.web.dev/) | Auditoría automatizada periódica mediante GitHub Actions evaluando tiempos de carga (FCP, LCP, CLS), Best Practices y SEO. | Score 98/100 Performance, 100/100 Accesibilidad |
+
+### Auditoría de Rendimiento en Tiempo Real (Google Lighthouse)
+
+<div align="center">
+  <p>Análisis en tiempo real de <b><a href="https://www.reto-salud.online/" target="_blank">RETO Salud</a></b></p>
+  <a href="https://pagespeed.web.dev/analysis/https-www-reto-salud-online/g94v7r8ncc?form_factor=desktop" target="_blank" title="Ver informe oficial en vivo de Google PageSpeed Insights">
+    <img src="./assets/pagespeed.svg?v=2" alt="Métricas PageSpeed RETO Salud" />
+  </a>
+  <p><small><i>Haz clic en los círculos para ver la auditoría en vivo en <b>Google PageSpeed Insights</b></i></small></p>
+</div>
 
 ---
 
