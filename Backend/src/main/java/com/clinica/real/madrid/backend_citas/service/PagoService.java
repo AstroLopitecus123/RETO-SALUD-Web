@@ -49,14 +49,17 @@ public class PagoService {
                 && !citaParaIntent.getPaciente().getId().equals(request.getUsuarioId())) {
             throw new BadRequestException("No puedes realizar pagos para una cita que pertenece a otro paciente");
         }
-        Double precioReal = (citaParaIntent.getMedico() != null && citaParaIntent.getMedico().getEspecialidad() != null && citaParaIntent.getMedico().getEspecialidad().getPrecioBase() != null)
+        Double precioReal = (citaParaIntent.getMedico() != null && citaParaIntent.getMedico().getEspecialidad() != null)
                 ? citaParaIntent.getMedico().getEspecialidad().getPrecioBase()
-                : (request.getMonto() != null ? request.getMonto() : 0.0);
+                : null;
+        if (precioReal == null || precioReal <= 0) {
+            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
+        }
         long montoCentavos = (long) (precioReal * 100);
 
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                 .setAmount(montoCentavos)
-                .setCurrency(request.getMoneda() != null ? request.getMoneda().toLowerCase() : "pen")
+                .setCurrency("pen")
 
                 .addPaymentMethodType("card")
                 .putMetadata("citaId", request.getCitaId().toString())
@@ -86,10 +89,13 @@ public class PagoService {
         Pago pago = new Pago();
         pago.setCita(cita);
         pago.setUsuario(usuario);
-        BigDecimal precioEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null && cita.getMedico().getEspecialidad().getPrecioBase() != null)
-                ? BigDecimal.valueOf(cita.getMedico().getEspecialidad().getPrecioBase())
-                : request.getMonto();
-        pago.setMonto(precioEfectivo);
+        Double precioBaseEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
+                ? cita.getMedico().getEspecialidad().getPrecioBase()
+                : null;
+        if (precioBaseEfectivo == null || precioBaseEfectivo <= 0) {
+            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
+        }
+        pago.setMonto(BigDecimal.valueOf(precioBaseEfectivo));
         pago.setMetodo(MetodoPago.EFECTIVO);
         pago.setEstadoPago(EstadoPago.PENDIENTE); 
         pago.setFechaPago(null);
@@ -137,10 +143,13 @@ public class PagoService {
         Pago pago = new Pago();
         pago.setCita(cita);
         pago.setUsuario(usuario);
-        BigDecimal precioEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null && cita.getMedico().getEspecialidad().getPrecioBase() != null)
-                ? BigDecimal.valueOf(cita.getMedico().getEspecialidad().getPrecioBase())
-                : request.getMonto();
-        pago.setMonto(precioEfectivo);
+        Double precioBaseEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
+                ? cita.getMedico().getEspecialidad().getPrecioBase()
+                : null;
+        if (precioBaseEfectivo == null || precioBaseEfectivo <= 0) {
+            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
+        }
+        pago.setMonto(BigDecimal.valueOf(precioBaseEfectivo));
         pago.setMetodo(MetodoPago.EFECTIVO);
         pago.setEstadoPago(EstadoPago.COMPLETADO);
         pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
@@ -172,9 +181,13 @@ public class PagoService {
         Pago pago = new Pago();
         pago.setCita(cita);
         pago.setUsuario(usuario);
-        BigDecimal precioTarjeta = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null && cita.getMedico().getEspecialidad().getPrecioBase() != null)
-                ? BigDecimal.valueOf(cita.getMedico().getEspecialidad().getPrecioBase())
-                : request.getMonto();
+        Double precioBaseTarjeta = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
+                ? cita.getMedico().getEspecialidad().getPrecioBase()
+                : null;
+        if (precioBaseTarjeta == null || precioBaseTarjeta <= 0) {
+            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
+        }
+        BigDecimal precioTarjeta = BigDecimal.valueOf(precioBaseTarjeta);
         pago.setMonto(precioTarjeta);
         pago.setMetodo(MetodoPago.TARJETA);
         pago.setTransaccionId(request.getReferencia());
@@ -193,6 +206,9 @@ public class PagoService {
                     PaymentIntent intent = PaymentIntent.retrieve(request.getReferencia());
                     if (!"succeeded".equalsIgnoreCase(intent.getStatus())) {
                         throw new BadRequestException("El pago no ha sido completado en Stripe. Estado: " + intent.getStatus());
+                    }
+                    if (intent.getCurrency() == null || !"pen".equalsIgnoreCase(intent.getCurrency())) {
+                        throw new BadRequestException("La moneda del pago en Stripe debe ser PEN (Soles)");
                     }
                     long montoEsperadoCentavos = (long) (precioTarjeta.doubleValue() * 100);
                     if (intent.getAmount() == null || intent.getAmount() < montoEsperadoCentavos) {

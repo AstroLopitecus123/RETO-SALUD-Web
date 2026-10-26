@@ -97,6 +97,21 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario con ID " + id + " no encontrado"));
     }
 
+    private void validarFortalezaContrasena(String contrasena) {
+        if (contrasena == null || contrasena.length() < 8) {
+            throw new BadRequestException("La contrasena debe tener al menos 8 caracteres");
+        }
+        if (!contrasena.matches(".*[A-Z].*")) {
+            throw new BadRequestException("La contrasena debe incluir al menos una letra mayuscula");
+        }
+        if (!contrasena.matches(".*[a-z].*")) {
+            throw new BadRequestException("La contrasena debe incluir al menos una letra minuscula");
+        }
+        if (!contrasena.matches(".*[0-9].*")) {
+            throw new BadRequestException("La contrasena debe incluir al menos un numero");
+        }
+    }
+
     public Usuario registrarUsuario(UsuarioRegistroRequest request) {
 
         if (request.getNombre() == null || request.getNombre().isBlank() ||
@@ -109,6 +124,8 @@ public class UsuarioService {
             request.getPaisId() == null) {
             throw new BadRequestException("Todos los campos son obligatorios");
         }
+
+        validarFortalezaContrasena(request.getContrasena());
 
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
             throw new BadRequestException("Ya existe un usuario con ese correo");
@@ -327,6 +344,7 @@ public class UsuarioService {
         if (usuario.getTokenExpira().isBefore(LocalDateTime.now(java.time.ZoneId.systemDefault()))) {
             throw new RuntimeException("El token ha expirado.");
         }
+        validarFortalezaContrasena(nuevaContrasena);
 
         usuario.setContrasena(passwordEncoder.encode(nuevaContrasena));
         usuario.setTokenRecuperacion(null);
@@ -344,6 +362,7 @@ public class UsuarioService {
             throw new BadRequestException("La contraseña actual es incorrecta");
         }
 
+        validarFortalezaContrasena(nuevaPassword);
         usuario.setContrasena(passwordEncoder.encode(nuevaPassword));
         usuarioRepository.save(usuario);
     }

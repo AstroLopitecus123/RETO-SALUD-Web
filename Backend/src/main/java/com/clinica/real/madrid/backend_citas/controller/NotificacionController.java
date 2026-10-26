@@ -52,8 +52,15 @@ public class NotificacionController {
     }
 
     @PutMapping("/{id}/leer")
-    public ResponseEntity<Notificacion> marcarComoLeida(@PathVariable Long id) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> marcarComoLeida(@PathVariable Long id, Authentication auth) {
+        String correo = auth.getName();
+        Usuario r = usuarioRepository.findByCorreo(correo)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         Notificacion notificacion = notificacionService.marcarComoLeida(id);
+        if (notificacion != null && notificacion.getUsuarioDestino() != null && !notificacion.getUsuarioDestino().getId().equals(r.getId())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes modificar notificaciones ajenas"));
+        }
         return ResponseEntity.ok(notificacion);
     }
 }

@@ -41,21 +41,37 @@ public class HistorialController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO')")
     public ResponseEntity<Historial> registrarHistorial(
             @PathVariable Long citaId,
-            @RequestBody Historial historial) {
-        return ResponseEntity.ok(historialService.registrarHistorial(citaId, historial));
+            @RequestBody Historial historial,
+            Authentication auth) {
+        boolean esAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        Long usuarioId = (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) ? principal.getId() : null;
+        return ResponseEntity.ok(historialService.registrarHistorial(citaId, historial, usuarioId, esAdmin));
     }
 
     @GetMapping("/cita/{citaId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
-    public ResponseEntity<Historial> obtenerPorCita(@PathVariable Long citaId, Authentication auth) {
+    public ResponseEntity<?> obtenerPorCita(@PathVariable Long citaId, Authentication auth) {
         Historial historial = historialService.obtenerPorCita(citaId).orElse(null);
         if (historial == null) {
             return ResponseEntity.ok(null);
         }
-        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-            if (historial.getCita() == null || historial.getCita().getPaciente() == null
-                    || !historial.getCita().getPaciente().getId().equals(principal.getId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            boolean esAdminORecepcion = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"));
+            if (!esAdminORecepcion) {
+                boolean esMedico = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"));
+                if (esMedico) {
+                    if (historial.getCita() == null || historial.getCita().getMedico() == null
+                            || historial.getCita().getMedico().getUsuario() == null
+                            || !historial.getCita().getMedico().getUsuario().getId().equals(principal.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes ver el historial clinico de otra consulta"));
+                    }
+                } else {
+                    if (historial.getCita() == null || historial.getCita().getPaciente() == null
+                            || !historial.getCita().getPaciente().getId().equals(principal.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes ver el historial clinico de otro paciente"));
+                    }
+                }
             }
         }
         return ResponseEntity.ok(historial); 
@@ -88,15 +104,28 @@ public class HistorialController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
-    public ResponseEntity<Historial> obtenerPorId(@PathVariable Long id, Authentication auth) {
+    public ResponseEntity<?> obtenerPorId(@PathVariable Long id, Authentication auth) {
         Historial historial = historialService.obtenerPorId(id).orElse(null);
         if (historial == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-            if (historial.getCita() == null || historial.getCita().getPaciente() == null
-                    || !historial.getCita().getPaciente().getId().equals(principal.getId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            boolean esAdminORecepcion = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"));
+            if (!esAdminORecepcion) {
+                boolean esMedico = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"));
+                if (esMedico) {
+                    if (historial.getCita() == null || historial.getCita().getMedico() == null
+                            || historial.getCita().getMedico().getUsuario() == null
+                            || !historial.getCita().getMedico().getUsuario().getId().equals(principal.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes ver el historial clinico de otra consulta"));
+                    }
+                } else {
+                    if (historial.getCita() == null || historial.getCita().getPaciente() == null
+                            || !historial.getCita().getPaciente().getId().equals(principal.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes ver el historial clinico de otro paciente"));
+                    }
+                }
             }
         }
         return ResponseEntity.ok(historial);

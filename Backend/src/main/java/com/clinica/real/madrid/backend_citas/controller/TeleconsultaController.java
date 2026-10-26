@@ -105,57 +105,62 @@ public class TeleconsultaController {
         config.put("agoraAppId", (aId != null && !aId.isEmpty()) ? aId : "AGORA_NOT_FOUND");
         config.put("deepgramApiKey", (dKey != null && !dKey.isEmpty()) ? dKey : "DEEPGRAM_NOT_FOUND");
 
-        if (canal != null && !canal.isEmpty() && aId != null && !aId.isEmpty() && aCert != null && !aCert.isEmpty()) {
-            try {
-                io.agora.media.RtcTokenBuilder2 tokenBuilder = new io.agora.media.RtcTokenBuilder2();
-                int expirationTimeInSeconds = 7200;
-                int timestamp = (int)(System.currentTimeMillis() / 1000 + expirationTimeInSeconds);
-                
-                if (canal.startsWith("cita-")) {
-                    try {
-                        Long cId = Long.parseLong(canal.substring(5));
-                        Cita cita = citaService.obtenerPorId(cId);
-                        
-                        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-                            config.put("agoraToken", "NO_AUTORIZADO");
-                            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(config);
-                        }
-                        
-                        boolean esStaff = auth.getAuthorities().stream().anyMatch(a -> 
-                            a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"));
-                        
-                        if (!esStaff && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-                            boolean esPaciente = cita.getPaciente() != null && cita.getPaciente().getId().equals(principal.getId());
-                            boolean esMedico = cita.getMedico() != null && cita.getMedico().getUsuario() != null 
-                                && cita.getMedico().getUsuario().getId().equals(principal.getId());
-                            
-                            if (!esPaciente && !esMedico) {
-                                config.put("agoraToken", "ACCESO_DENEGADO");
-                                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(config);
-                            }
-                        }
-                    } catch (Exception e) {
-                        config.put("agoraToken", "CITA_NO_VALIDA");
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);
-                    }
-                }
-                String result = tokenBuilder.buildTokenWithUid(
-                    aId, aCert, canal, 0, io.agora.media.RtcTokenBuilder2.Role.ROLE_PUBLISHER, timestamp, timestamp);
-                
-                config.put("agoraToken", result);
-                if (rol != null && rol.toUpperCase().contains("MEDICO") && canal.startsWith("cita-")) {
-                    try {
-                        Long citaId = Long.parseLong(canal.substring(5));
-                        citaService.notificarDoctorEnSala(citaId);
-                    } catch (NumberFormatException e) {
-                        System.err.println("Error al extraer ID de cita del canal: " + canal);
-                    }
-                }
-            } catch (Exception e) {
-                config.put("agoraToken", "ERROR_GENERATING_TOKEN");
+        if (canal != null && !canal.trim().isEmpty()) {
+            if (!canal.matches("^cita-\\d+$")) {
+                config.put("agoraToken", "FORMATO_CANAL_INVALIDO");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);
             }
-        } else {
-            config.put("agoraToken", "MISSING_VARIABLES_OR_CANAL");
+
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                config.put("agoraToken", "NO_AUTORIZADO");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(config);
+            }
+
+            Long cId;
+            Cita cita;
+            try {
+                cId = Long.parseLong(canal.substring(5));
+                cita = citaService.obtenerPorId(cId);
+            } catch (Exception e) {
+                config.put("agoraToken", "CITA_NO_VALIDA");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);
+            }
+
+            boolean esStaff = auth.getAuthorities().stream().anyMatch(a -> 
+                a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"));
+            boolean esMedico = false;
+
+            if (!esStaff && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+                boolean esPaciente = cita.getPaciente() != null && cita.getPaciente().getId().equals(principal.getId());
+                esMedico = cita.getMedico() != null && cita.getMedico().getUsuario() != null 
+                    && cita.getMedico().getUsuario().getId().equals(principal.getId());
+                
+                if (!esPaciente && !esMedico) {
+                    config.put("agoraToken", "ACCESO_DENEGADO");
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(config);
+                }
+            } else if (auth.getPrincipal() instanceof UsuarioPrincipal principal && cita.getMedico() != null && cita.getMedico().getUsuario() != null) {
+                esMedico = cita.getMedico().getUsuario().getId().equals(principal.getId());
+            }
+
+            if (aId != null && !aId.isEmpty() && aCert != null && !aCert.isEmpty()) {
+                try {
+                    io.agora.media.RtcTokenBuilder2 tokenBuilder = new io.agora.media.RtcTokenBuilder2();
+                    int expirationTimeInSeconds = 7200;
+                    int timestamp = (int)(System.currentTimeMillis() / 1000 + expirationTimeInSeconds);
+                    String result = tokenBuilder.buildTokenWithUid(
+                        aId, aCert, canal, 0, io.agora.media.RtcTokenBuilder2.Role.ROLE_PUBLISHER, timestamp, timestamp);
+                    config.put("agoraToken", result);
+
+                    if (esMedico) {
+                        citaService.notificarDoctorEnSala(cId);
+                    }
+                } catch (Exception e) {
+                    config.put("agoraToken", "ERROR_GENERATING_TOKEN");
+                }
+            } else {
+                config.put("agoraToken", "MISSING_VARIABLES");
+            }
         }
 
         return ResponseEntity.ok(config);

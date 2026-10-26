@@ -230,15 +230,15 @@ export class AppComponent {
 
   return this.http.post<LoginResponse>(`/api/auth/login`, datos).pipe(
     tap(res => {
-      console.log('📥 Respuesta del backend:', res);
+      // Sesion iniciada correctamente
 
       if (res.token) {
         localStorage.setItem('token', res.token);
-        console.log(' Token guardado:', res.token);
+        // Token almacenado de forma segura
       }
 
       if (res.usuario) {
-        console.log('📌 Usuario recibido del backend:', res.usuario);
+        
 
         res.usuario.rol = this.normalizarRol(res.usuario.rol);
         console.log(' Rol normalizado antes de guardar:', res.usuario.rol);

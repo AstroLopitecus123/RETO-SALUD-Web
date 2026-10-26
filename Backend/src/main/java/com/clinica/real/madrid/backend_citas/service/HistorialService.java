@@ -23,9 +23,21 @@ public class HistorialService {
     }
 
     public Historial registrarHistorial(Long citaId, Historial historial) {
+        return registrarHistorial(citaId, historial, null, true);
+    }
+
+    public Historial registrarHistorial(Long citaId, Historial historial, Long usuarioId, boolean esAdmin) {
         Cita cita = citaRepository.findById(citaId)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada con ID: " + citaId));
 
+        if (!esAdmin && usuarioId != null) {
+            if (cita.getMedico() == null || cita.getMedico().getUsuario() == null
+                    || !cita.getMedico().getUsuario().getId().equals(usuarioId)) {
+                throw new com.clinica.real.madrid.backend_citas.exception.BadRequestException("No tienes permiso para registrar historial en una cita ajena");
+            }
+        }
+
+        historial.setId(null);
         historial.setCita(cita);
 
         Historial guardado = historialRepository.save(historial);
