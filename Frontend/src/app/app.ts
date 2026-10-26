@@ -160,15 +160,15 @@ export class AppComponent {
 
   verificarLogin() {
     const usuarioStr = localStorage.getItem('usuario');
-    console.log('⏳ Valor raw de localStorage usuario:', usuarioStr);
+    // Verificando sesion de usuario
 
     if (usuarioStr) {
       try {
         const parsedUsuario: Usuario = JSON.parse(usuarioStr);
-        console.log(' Usuario parseado:', parsedUsuario);
+        
 
         parsedUsuario.rol = this.normalizarRol(parsedUsuario.rol);
-        console.log(' Rol normalizado:', parsedUsuario.rol);
+        
 
         this.usuario = parsedUsuario;
         this.isLoggedIn = true;

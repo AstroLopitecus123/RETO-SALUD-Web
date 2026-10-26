@@ -57,9 +57,9 @@ public class NotificacionController {
         String correo = auth.getName();
         Usuario r = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        Notificacion notificacion = notificacionService.marcarComoLeida(id);
-        if (notificacion != null && notificacion.getUsuarioDestino() != null && !notificacion.getUsuarioDestino().getId().equals(r.getId())) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes modificar notificaciones ajenas"));
+        Notificacion notificacion = notificacionService.marcarComoLeida(id, r.getId());
+        if (notificacion == null) {
+            return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(notificacion);
     }

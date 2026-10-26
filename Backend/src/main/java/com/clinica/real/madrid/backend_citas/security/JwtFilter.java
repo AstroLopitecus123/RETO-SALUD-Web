@@ -56,7 +56,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             boolean valido = jwtUtil.validateToken(token);
 
-            if (valido) {
+            if (valido && userDetails.isEnabled()) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

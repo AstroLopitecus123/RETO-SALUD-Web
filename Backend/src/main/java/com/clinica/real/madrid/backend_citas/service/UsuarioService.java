@@ -101,6 +101,9 @@ public class UsuarioService {
         if (contrasena == null || contrasena.length() < 8) {
             throw new BadRequestException("La contrasena debe tener al menos 8 caracteres");
         }
+        if (contrasena.length() > 72) {
+            throw new BadRequestException("La contrasena no puede exceder los 72 caracteres");
+        }
         if (!contrasena.matches(".*[A-Z].*")) {
             throw new BadRequestException("La contrasena debe incluir al menos una letra mayuscula");
         }

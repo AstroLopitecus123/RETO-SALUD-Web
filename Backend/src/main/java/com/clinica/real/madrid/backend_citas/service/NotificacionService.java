@@ -37,14 +37,22 @@ public class NotificacionService {
     }
 
     public Notificacion marcarComoLeida(Long id) {
+        return marcarComoLeida(id, null);
+    }
+
+    public Notificacion marcarComoLeida(Long id, Long usuarioId) {
         try {
-            Notificacion notificacion = notificacionRepository.findById(id)
-                    .orElse(null);
-            if (notificacion != null) {
-                notificacion.setLeida(true);
-                return notificacionRepository.save(notificacion);
+            Notificacion notificacion = notificacionRepository.findById(id).orElse(null);
+            if (notificacion == null) {
+                return null;
             }
-            return null;
+            if (usuarioId != null && notificacion.getUsuarioDestino() != null && !notificacion.getUsuarioDestino().getId().equals(usuarioId)) {
+                throw new com.clinica.real.madrid.backend_citas.exception.BadRequestException("No puedes modificar notificaciones ajenas");
+            }
+            notificacion.setLeida(true);
+            return notificacionRepository.save(notificacion);
+        } catch (com.clinica.real.madrid.backend_citas.exception.BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             System.err.println("Error al marcar notificación como leída: " + e.getMessage());
             return null;

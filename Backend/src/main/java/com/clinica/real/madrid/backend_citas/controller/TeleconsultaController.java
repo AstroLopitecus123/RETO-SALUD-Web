@@ -39,7 +39,7 @@ public class TeleconsultaController {
     private com.clinica.real.madrid.backend_citas.service.CitaService citaService;
 
     @GetMapping("/config")
-    public ResponseEntity<Map<String, String>> getConfig(
+    public ResponseEntity<?> getConfig(
             @RequestParam(value = "canal", required = false) String canal,
             @RequestParam(value = "rol", required = false) String rol,
             HttpServletRequest httpRequest,
@@ -102,18 +102,13 @@ public class TeleconsultaController {
             }
         }
 
-        config.put("agoraAppId", (aId != null && !aId.isEmpty()) ? aId : "AGORA_NOT_FOUND");
-        config.put("deepgramApiKey", (dKey != null && !dKey.isEmpty()) ? dKey : "DEEPGRAM_NOT_FOUND");
-
         if (canal != null && !canal.trim().isEmpty()) {
             if (!canal.matches("^cita-\\d+$")) {
-                config.put("agoraToken", "FORMATO_CANAL_INVALIDO");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Formato de canal invalido"));
             }
 
             if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-                config.put("agoraToken", "NO_AUTORIZADO");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(config);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe iniciar sesion para ingresar a la videollamada"));
             }
 
             Long cId;
@@ -122,8 +117,7 @@ public class TeleconsultaController {
                 cId = Long.parseLong(canal.substring(5));
                 cita = citaService.obtenerPorId(cId);
             } catch (Exception e) {
-                config.put("agoraToken", "CITA_NO_VALIDA");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Cita no valida o no encontrada"));
             }
 
             boolean esStaff = auth.getAuthorities().stream().anyMatch(a -> 
@@ -136,12 +130,14 @@ public class TeleconsultaController {
                     && cita.getMedico().getUsuario().getId().equals(principal.getId());
                 
                 if (!esPaciente && !esMedico) {
-                    config.put("agoraToken", "ACCESO_DENEGADO");
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(config);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Acceso denegado a esta consulta"));
                 }
             } else if (auth.getPrincipal() instanceof UsuarioPrincipal principal && cita.getMedico() != null && cita.getMedico().getUsuario() != null) {
                 esMedico = cita.getMedico().getUsuario().getId().equals(principal.getId());
             }
+
+            config.put("agoraAppId", (aId != null && !aId.isEmpty()) ? aId : "AGORA_NOT_FOUND");
+            config.put("deepgramApiKey", (dKey != null && !dKey.isEmpty()) ? dKey : "DEEPGRAM_NOT_FOUND");
 
             if (aId != null && !aId.isEmpty() && aCert != null && !aCert.isEmpty()) {
                 try {
@@ -161,8 +157,11 @@ public class TeleconsultaController {
             } else {
                 config.put("agoraToken", "MISSING_VARIABLES");
             }
+            return ResponseEntity.ok(config);
         }
 
+        config.put("agoraAppId", (aId != null && !aId.isEmpty()) ? aId : "AGORA_NOT_FOUND");
+        config.put("deepgramApiKey", (dKey != null && !dKey.isEmpty()) ? dKey : "DEEPGRAM_NOT_FOUND");
         return ResponseEntity.ok(config);
     }
 }
