@@ -95,21 +95,14 @@ public class AuthController {
         String correo = request.getCorreo() != null ? request.getCorreo().toLowerCase().trim() : "";
         if (correo.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Correo o contraseña incorrectos."));
+                    .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
         }
 
         LocalDateTime expira = bloqueoExpiraMap.get(correo);
         if (expira != null) {
             if (LocalDateTime.now(java.time.ZoneId.systemDefault()).isBefore(expira)) {
-                long segundosRestantes = ChronoUnit.SECONDS.between(LocalDateTime.now(java.time.ZoneId.systemDefault()), expira);
-                long minutos = segundosRestantes / 60;
-                long segundos = segundosRestantes % 60;
-                String tiempoRestante = minutos > 0
-                        ? minutos + " min " + segundos + " seg"
-                        : segundos + " seg";
-                System.err.println("INCIDENTE: Intento de inicio de sesión en cuenta bloqueada: " + correo);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Cuenta bloqueada. Reintente en " + tiempoRestante + "."));
+                        .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
             } else {
                 bloqueoExpiraMap.remove(correo);
                 intentosFallidosMap.remove(correo);
@@ -125,8 +118,6 @@ public class AuthController {
 
             intentosFallidosMap.remove(correo);
 
-            System.out.println("ROL BACKEND: " + usuario.getRol());
-
             String token = jwtUtil.generateToken(usuario.getCorreo());
 
             UsuarioResponse response = new UsuarioResponse(token, usuario);
@@ -140,21 +131,14 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            boolean existe = usuarioService.existePorCorreo(correo);
-            if (existe) {
-                int intentos = intentosFallidosMap.getOrDefault(correo, 0) + 1;
-                intentosFallidosMap.put(correo, intentos);
-                System.out.println("Intentos fallidos para " + correo + ": " + intentos);
+            int intentos = intentosFallidosMap.getOrDefault(correo, 0) + 1;
+            intentosFallidosMap.put(correo, intentos);
 
-                if (intentos >= 5) {
-                    bloqueoExpiraMap.put(correo, LocalDateTime.now(java.time.ZoneId.systemDefault()).plusMinutes(3));
-                    System.err.println("INCIDENTE: Cuenta bloqueada temporalmente por exceso de intentos fallidos (5): " + correo);
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                            .body(Map.of("message", "Cuenta bloqueada por 5 intentos fallidos. Reintente en 3 min 0 seg."));
-                }
+            if (intentos >= 5) {
+                bloqueoExpiraMap.put(correo, LocalDateTime.now(java.time.ZoneId.systemDefault()).plusMinutes(15));
             }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Correo o contraseña incorrectos."));
+                    .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
         }
     }
 
