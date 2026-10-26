@@ -37,32 +37,24 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         final String header = request.getHeader("Authorization");
-        System.out.println("Authorization header: " + header); 
 
         String token = null;
         String username = null;
 
-        System.out.println("Authorization header: " + header);
-
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
-            System.out.println("Token extraído: " + token);
 
             try {
                 username = jwtUtil.getUsernameFromToken(token);
-                System.out.println("Username from token: " + username);
             } catch (Exception e) {
-                System.err.println("❌ No se pudo extraer el usuario del token (puede estar expirado): " + e.getMessage());
+                System.err.println("❌ No se pudo extraer el usuario del token (puede estar expirado)");
             }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            System.out.println("UserDetails cargado: " + userDetails.getUsername() 
-                               + ", roles: " + userDetails.getAuthorities());
 
             boolean valido = jwtUtil.validateToken(token);
-            System.out.println("Token válido? " + valido);
 
             if (valido) {
                 UsernamePasswordAuthenticationToken authToken =
@@ -76,4 +68,3 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

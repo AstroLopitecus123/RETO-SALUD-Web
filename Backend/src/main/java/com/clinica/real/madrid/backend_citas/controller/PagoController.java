@@ -1,11 +1,14 @@
 package com.clinica.real.madrid.backend_citas.controller;
 
 import com.clinica.real.madrid.backend_citas.dto.*;
+import com.clinica.real.madrid.backend_citas.security.UsuarioPrincipal;
 import com.clinica.real.madrid.backend_citas.service.PagoService;
 import com.stripe.exception.StripeException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +20,13 @@ public class PagoController {
 
     @Autowired
     private PagoService pagoService;
+
+    private boolean esStaff(Authentication auth) {
+        if (auth == null) return false;
+        return auth.getAuthorities().stream().anyMatch(a ->
+            a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION") || a.getAuthority().equals("ROLE_MEDICO")
+        );
+    }
 
     @PostMapping("/efectivo")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION')")
@@ -53,8 +63,13 @@ public class PagoController {
 
     @GetMapping("/cita/{citaId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO') or hasRole('PACIENTE')")
-    public ResponseEntity<List<PagoResponse>> obtenerPagosPorCita(@PathVariable Long citaId) {
+    public ResponseEntity<List<PagoResponse>> obtenerPagosPorCita(@PathVariable Long citaId, Authentication auth) {
         List<PagoResponse> response = pagoService.obtenerPagosPorCita(citaId);
+        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal && !response.isEmpty()) {
+            if (!response.get(0).getUsuarioId().equals(principal.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
         return ResponseEntity.ok(response);
     }
 

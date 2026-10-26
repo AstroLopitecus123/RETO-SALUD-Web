@@ -1,9 +1,12 @@
 package com.clinica.real.madrid.backend_citas.controller;
 
 import com.clinica.real.madrid.backend_citas.model.Historial;
+import com.clinica.real.madrid.backend_citas.security.UsuarioPrincipal;
 import com.clinica.real.madrid.backend_citas.service.HistorialService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,10 +22,17 @@ import java.util.List;
 @RequestMapping("/api/historiales")
 public class HistorialController {
 
-	private final HistorialService historialService;
+    private final HistorialService historialService;
 
     public HistorialController(HistorialService historialService) {
         this.historialService = historialService;
+    }
+
+    private boolean esStaff(Authentication auth) {
+        if (auth == null) return false;
+        return auth.getAuthorities().stream().anyMatch(a ->
+            a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_MEDICO") || a.getAuthority().equals("ROLE_RECEPCION")
+        );
     }
 
     @PostMapping("/{citaId}")
@@ -35,10 +45,18 @@ public class HistorialController {
 
     @GetMapping("/cita/{citaId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
-    public ResponseEntity<Historial> obtenerPorCita(@PathVariable Long citaId) {
-        return historialService.obtenerPorCita(citaId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.ok(null)); 
+    public ResponseEntity<Historial> obtenerPorCita(@PathVariable Long citaId, Authentication auth) {
+        Historial historial = historialService.obtenerPorCita(citaId).orElse(null);
+        if (historial == null) {
+            return ResponseEntity.ok(null);
+        }
+        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            if (historial.getCita() == null || historial.getCita().getPaciente() == null
+                    || !historial.getCita().getPaciente().getId().equals(principal.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+        return ResponseEntity.ok(historial); 
     }
 
     @GetMapping("/paciente/{pacienteId}")
@@ -49,10 +67,18 @@ public class HistorialController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
-    public ResponseEntity<Historial> obtenerPorId(@PathVariable Long id) {
-        return historialService.obtenerPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Historial> obtenerPorId(@PathVariable Long id, Authentication auth) {
+        Historial historial = historialService.obtenerPorId(id).orElse(null);
+        if (historial == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            if (historial.getCita() == null || historial.getCita().getPaciente() == null
+                    || !historial.getCita().getPaciente().getId().equals(principal.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        }
+        return ResponseEntity.ok(historial);
     }
 
     @GetMapping

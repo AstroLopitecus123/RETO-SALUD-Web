@@ -2,6 +2,7 @@ package com.clinica.real.madrid.backend_citas.controller;
 
 import com.clinica.real.madrid.backend_citas.dto.ChatbotRequest;
 import com.clinica.real.madrid.backend_citas.dto.ChatbotResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,11 +14,14 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/chatbot")
-
 public class ChatbotController {
+
+    private static final Map<String, List<Long>> peticionesPorIp = new ConcurrentHashMap<>();
+    private static final int MAX_PETICIONES_POR_MINUTO = 15;
 
     @Value("${GEMINI_API_KEY}")
     private String geminiApiKey;
@@ -30,7 +34,31 @@ public class ChatbotController {
 
     @SuppressWarnings("java:S4507")
     @PostMapping("/preguntar")
-    public ResponseEntity<?> hacerPregunta(@RequestBody Map<String, String> requestData) {
+    public ResponseEntity<?> hacerPregunta(@RequestBody Map<String, String> requestData, HttpServletRequest httpRequest) {
+        String ip = httpRequest.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) {
+            ip = httpRequest.getRemoteAddr();
+        } else {
+            ip = ip.split(",")[0].trim();
+        }
+
+        long ahora = System.currentTimeMillis();
+        peticionesPorIp.compute(ip, (k, lista) -> {
+            if (lista == null) lista = new ArrayList<>();
+            lista.removeIf(t -> ahora - t > 60_000);
+            return lista;
+        });
+
+        List<Long> tiempos = peticionesPorIp.get(ip);
+        if (tiempos != null && tiempos.size() >= MAX_PETICIONES_POR_MINUTO) {
+            return ResponseEntity.status(429)
+                    .body(Map.of("error", "Has realizado muchas preguntas en poco tiempo. Por favor espera un momento."));
+        }
+
+        if (tiempos != null) {
+            tiempos.add(ahora);
+        }
+
         String preguntaUsuario = requestData.get("pregunta");
 
         if (preguntaUsuario == null || preguntaUsuario.trim().isEmpty()) {
@@ -70,7 +98,7 @@ public class ChatbotController {
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());
-            return ResponseEntity.status(500).body(Map.of("error", "Error al conectar con la IA: " + e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "Error al conectar con la IA"));
         }
     }
 }

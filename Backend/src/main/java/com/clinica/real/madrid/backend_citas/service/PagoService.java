@@ -1,5 +1,6 @@
 package com.clinica.real.madrid.backend_citas.service;
 
+import com.clinica.real.madrid.backend_citas.exception.BadRequestException;
 import com.clinica.real.madrid.backend_citas.dto.*;
 import com.clinica.real.madrid.backend_citas.model.*;
 import com.clinica.real.madrid.backend_citas.repository.CitaRepository;
@@ -11,6 +12,7 @@ import com.stripe.model.Refund;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,9 @@ public class PagoService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Value("${stripe.secret-key}")
+    private String stripeSecretKey;
 
     @Transactional
     public PaymentIntentResponse crearPaymentIntent(PaymentIntentRequest request) throws StripeException {
@@ -147,6 +152,21 @@ public class PagoService {
         pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
 
         if (Boolean.TRUE.equals(request.getExito())) {
+            // Validación segura con Stripe si existe clave real configurada
+            if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_") && !"sk_test_tu_clave_dummy".equals(stripeSecretKey)) {
+                if (request.getReferencia() == null || request.getReferencia().trim().isEmpty()) {
+                    throw new BadRequestException("Referencia de transacción de Stripe requerida");
+                }
+                try {
+                    PaymentIntent intent = PaymentIntent.retrieve(request.getReferencia());
+                    if (!"succeeded".equalsIgnoreCase(intent.getStatus())) {
+                        throw new BadRequestException("El pago no ha sido completado en Stripe. Estado: " + intent.getStatus());
+                    }
+                } catch (StripeException e) {
+                    throw new BadRequestException("Error al validar el pago con Stripe: " + e.getMessage());
+                }
+            }
+
             pago.setEstadoPago(EstadoPago.COMPLETADO);
 
             Comprobante comprobante = new Comprobante();

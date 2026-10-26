@@ -25,6 +25,7 @@ public class AuthController {
 
     private static final Map<String, Integer> intentosFallidosMap = new ConcurrentHashMap<>();
     private static final Map<String, LocalDateTime> bloqueoExpiraMap = new ConcurrentHashMap<>();
+    private static final Map<String, Long> cooldownRecuperacionMap = new ConcurrentHashMap<>();
 
     @Autowired
     private UsuarioService usuarioService;
@@ -142,6 +143,15 @@ public class AuthController {
     @PostMapping("/recuperar")
     public ResponseEntity<?> recuperar(@RequestBody Map<String, String> body) {
         String correo = body.get("correo");
+        if (correo != null) {
+            correo = correo.toLowerCase().trim();
+            long ahora = System.currentTimeMillis();
+            Long ultimoEnvio = cooldownRecuperacionMap.get(correo);
+            if (ultimoEnvio != null && (ahora - ultimoEnvio < 60_000)) {
+                return ResponseEntity.ok(Map.of("mensaje", "Ya enviamos un correo recientemente. Por favor espera 1 minuto antes de solicitar otro."));
+            }
+            cooldownRecuperacionMap.put(correo, ahora);
+        }
         usuarioService.enviarCorreoRecuperacion(correo);
         return ResponseEntity.ok(Map.of("mensaje", "Correo de recuperación enviado correctamente."));
     }
@@ -154,4 +164,3 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada correctamente."));
     }
 }
-
