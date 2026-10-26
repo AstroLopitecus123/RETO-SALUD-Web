@@ -1,4 +1,3 @@
-
 import { RolUsuario, EstadoUsuario } from './tipos';
 
 export class Usuario {
@@ -19,6 +18,7 @@ export class Usuario {
   correoUsuario?: string; 
   configuracionVisual?: string;
   fotoUrl?: string;
+  recaptchaToken?: string;
   constructor(data?: any) {
     if (data) {
       Object.assign(this, data);
@@ -47,4 +47,3 @@ export class LoginResponse {
     }
   }
 }
-

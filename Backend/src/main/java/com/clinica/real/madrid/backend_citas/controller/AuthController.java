@@ -39,10 +39,17 @@ public class AuthController {
     @Autowired
     private com.clinica.real.madrid.backend_citas.service.MedicoService medicoService;
 
+    @Autowired
+    private com.clinica.real.madrid.backend_citas.service.RecaptchaService recaptchaService;
+
     @PostMapping("/registro")
     @SuppressWarnings("java:S4507")
     public ResponseEntity<?> registro(@RequestBody UsuarioRegistroRequest request) {
         try {
+            if (!recaptchaService.validarToken(request.getRecaptchaToken())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Verificación de reCAPTCHA fallida. Por favor intenta nuevamente."));
+            }
 
             Usuario usuario = usuarioService.registrarUsuario(request);
 

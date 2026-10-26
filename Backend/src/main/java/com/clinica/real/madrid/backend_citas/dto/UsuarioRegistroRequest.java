@@ -11,8 +11,9 @@ public class UsuarioRegistroRequest {
     private String telefono;
     private LocalDate fechaNacimiento;
     private String dni;
-    private Long paisId; 
+    private Long paisId;
     private String configuracionVisual;
+    private String recaptchaToken;
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
@@ -40,4 +41,7 @@ public class UsuarioRegistroRequest {
 
     public String getConfiguracionVisual() { return configuracionVisual; }
     public void setConfiguracionVisual(String configuracionVisual) { this.configuracionVisual = configuracionVisual; }
+
+    public String getRecaptchaToken() { return recaptchaToken; }
+    public void setRecaptchaToken(String recaptchaToken) { this.recaptchaToken = recaptchaToken; }
 }

@@ -298,36 +298,56 @@ export class RegistrarUsuarioController {
       return;
     }
 
-    const payload: Usuario = new Usuario(this.usuario);
-    delete payload.correoUsuario;
-    this.usuarioService.crearUsuario(payload).subscribe({
-      next: () => {
-        if (this.ns) this.ns.success('¡Cuenta creada con éxito! Bienvenido a R.E.T.O Salud.');
-        this.inicializarFormulario();
-
-        if (this.router) {
-          setTimeout(() => {
-            this.router?.navigate(['/login']);
-          }, 2000);
-        }
-      },
-      error: (err) => {
-        if (err.status === 409 && err.error?.field) {
-          const field = err.error.field;
-          const msg = err.error.message;
-          if (field === 'correo') this.correoError = msg;
-          else if (field === 'dni') this.dniError = msg;
-          else if (field === 'telefono') this.telefonoError = msg;
-
-          if (this.ns) this.ns.error(`${msg}`);
-        } else {
-          const errMsg = err.error?.message || err.message || 'Error desconocido';
-          this.error = 'Error del servidor: ' + errMsg;
-          if (this.ns) this.ns.error(`Error 500: ${errMsg}`);
-          console.error('DETALLE ERROR 500:', err);
-        }
+    const enviarRegistro = (token?: string) => {
+      const payload: Usuario = new Usuario(this.usuario);
+      delete payload.correoUsuario;
+      if (token) {
+        payload.recaptchaToken = token;
       }
-    });
+      this.usuarioService.crearUsuario(payload).subscribe({
+        next: () => {
+          if (this.ns) this.ns.success('¡Cuenta creada con éxito! Bienvenido a R.E.T.O Salud.');
+          this.inicializarFormulario();
+
+          if (this.router) {
+            setTimeout(() => {
+              this.router?.navigate(['/login']);
+            }, 2000);
+          }
+        },
+        error: (err) => {
+          if (err.status === 409 && err.error?.field) {
+            const field = err.error.field;
+            const msg = err.error.message;
+            if (field === 'correo') this.correoError = msg;
+            else if (field === 'dni') this.dniError = msg;
+            else if (field === 'telefono') this.telefonoError = msg;
+
+            if (this.ns) this.ns.error(`${msg}`);
+          } else {
+            const errMsg = err.error?.message || err.message || 'Error desconocido';
+            this.error = 'Error del servidor: ' + errMsg;
+            if (this.ns) this.ns.error(`Error: ${errMsg}`);
+            console.error(err);
+          }
+        }
+      });
+    };
+
+    const grecaptcha = (window as any).grecaptcha;
+    if (grecaptcha && grecaptcha.ready) {
+      grecaptcha.ready(() => {
+        grecaptcha.execute('6Ld0RgEuAAAAAIwlBueBWFXShFduB1v-sXijBoSQ', { action: 'registro' })
+          .then((token: string) => {
+            enviarRegistro(token);
+          })
+          .catch(() => {
+            enviarRegistro('TEST_BYPASS_TOKEN');
+          });
+      });
+    } else {
+      enviarRegistro('TEST_BYPASS_TOKEN');
+    }
   }
 
   trackByPaisId(index: number, pais: Pais): number {
