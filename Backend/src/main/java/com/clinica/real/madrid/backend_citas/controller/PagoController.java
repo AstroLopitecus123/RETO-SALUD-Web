@@ -53,13 +53,21 @@ public class PagoController {
     }
 
     @PostMapping("/crear-intent")
-    public ResponseEntity<PaymentIntentResponse> crearPaymentIntent(@RequestBody PaymentIntentRequest request) throws StripeException {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PaymentIntentResponse> crearPaymentIntent(@RequestBody PaymentIntentRequest request, Authentication auth) throws StripeException {
+        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            request.setUsuarioId(principal.getId());
+        }
         PaymentIntentResponse response = pagoService.crearPaymentIntent(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/tarjeta")
-    public ResponseEntity<PagoResponse> pagarTarjeta(@RequestBody PagoTarjetaRequest request) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PagoResponse> pagarTarjeta(@RequestBody PagoTarjetaRequest request, Authentication auth) {
+        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            request.setUsuarioId(principal.getId());
+        }
         PagoResponse response = pagoService.pagarTarjeta(request);
         return ResponseEntity.ok(response);
     }

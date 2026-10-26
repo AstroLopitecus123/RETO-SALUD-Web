@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Map;
 
 @RestController
@@ -61,9 +62,28 @@ public class HistorialController {
     }
 
     @GetMapping("/paciente/{pacienteId}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or #pacienteId == authentication.principal.id")
-    public List<Historial> obtenerPorPaciente(@PathVariable Long pacienteId) {
-        return historialService.listarPorPaciente(pacienteId);
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
+    public ResponseEntity<?> obtenerPorPaciente(@PathVariable Long pacienteId, Authentication auth) {
+        if (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            boolean esAdminORecepcion = auth.getAuthorities().stream().anyMatch(a ->
+                    a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"));
+            if (!esAdminORecepcion) {
+                boolean esPaciente = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_PACIENTE"));
+                if (esPaciente && !pacienteId.equals(principal.getId())) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes ver el historial de otro paciente"));
+                }
+            }
+        }
+        List<Historial> historiales = historialService.listarPorPaciente(pacienteId);
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"))
+                && !auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            if (auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+                historiales = historiales.stream().filter(h -> h.getCita() != null && h.getCita().getMedico() != null
+                        && h.getCita().getMedico().getUsuario() != null
+                        && h.getCita().getMedico().getUsuario().getId().equals(principal.getId())).collect(Collectors.toList());
+            }
+        }
+        return ResponseEntity.ok(historiales);
     }
 
     @GetMapping("/{id}")
@@ -84,14 +104,32 @@ public class HistorialController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION')")
-    public List<Historial> listarTodos() {
-        return historialService.listarTodos();
+    public List<Historial> listarTodos(Authentication auth) {
+        List<Historial> todos = historialService.listarTodos();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"))
+                && !auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"))) {
+            if (auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+                return todos.stream().filter(h -> h.getCita() != null && h.getCita().getMedico() != null
+                        && h.getCita().getMedico().getUsuario() != null
+                        && h.getCita().getMedico().getUsuario().getId().equals(principal.getId())).collect(Collectors.toList());
+            }
+        }
+        return todos;
     }
 
     @GetMapping("/todas-con-citas")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION')")
-    public List<Historial> listarTodasConCitas() {
-        return historialService.listarTodasConCitas();
+    public List<Historial> listarTodasConCitas(Authentication auth) {
+        List<Historial> todas = historialService.listarTodasConCitas();
+        if (auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"))
+                && !auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"))) {
+            if (auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+                return todas.stream().filter(h -> h.getCita() != null && h.getCita().getMedico() != null
+                        && h.getCita().getMedico().getUsuario() != null
+                        && h.getCita().getMedico().getUsuario().getId().equals(principal.getId())).collect(Collectors.toList());
+            }
+        }
+        return todas;
     }
 
     @PutMapping("/{id}")

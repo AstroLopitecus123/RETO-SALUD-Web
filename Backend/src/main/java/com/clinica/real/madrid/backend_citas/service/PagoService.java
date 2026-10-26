@@ -45,6 +45,10 @@ public class PagoService {
 
         Cita citaParaIntent = citaRepository.findById(request.getCitaId())
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+        if (request.getUsuarioId() != null && citaParaIntent.getPaciente() != null 
+                && !citaParaIntent.getPaciente().getId().equals(request.getUsuarioId())) {
+            throw new BadRequestException("No puedes realizar pagos para una cita que pertenece a otro paciente");
+        }
         Double precioReal = (citaParaIntent.getMedico() != null && citaParaIntent.getMedico().getEspecialidad() != null && citaParaIntent.getMedico().getEspecialidad().getPrecioBase() != null)
                 ? citaParaIntent.getMedico().getEspecialidad().getPrecioBase()
                 : (request.getMonto() != null ? request.getMonto() : 0.0);
@@ -75,6 +79,9 @@ public class PagoService {
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
         Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
+            throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
+        }
 
         Pago pago = new Pago();
         pago.setCita(cita);
@@ -123,6 +130,9 @@ public class PagoService {
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
         Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
+            throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
+        }
 
         Pago pago = new Pago();
         pago.setCita(cita);
@@ -155,6 +165,9 @@ public class PagoService {
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
         Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
+            throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
+        }
 
         Pago pago = new Pago();
         pago.setCita(cita);
@@ -171,8 +184,8 @@ public class PagoService {
             if (request.getReferencia() != null && !request.getReferencia().trim().isEmpty() && pagoRepository.existsByTransaccionId(request.getReferencia().trim())) {
                 throw new BadRequestException("Esta transaccion de pago ya fue procesada anteriormente");
             }
-            // ValidaciÃ³n segura con Stripe si existe clave real configurada
-            if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_") && !"sk_test_tu_clave_dummy".equals(stripeSecretKey)) {
+            // Validacion obligatoria con Stripe
+            if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_")) {
                 if (request.getReferencia() == null || request.getReferencia().trim().isEmpty()) {
                     throw new BadRequestException("Referencia de transaccion de Stripe requerida");
                 }
@@ -193,6 +206,8 @@ public class PagoService {
                 } catch (StripeException e) {
                     throw new BadRequestException("Error al validar el pago con Stripe: " + e.getMessage());
                 }
+            } else {
+                throw new BadRequestException("La pasarela de pago Stripe no esta configurada correctamente en el servidor.");
             }
 
             pago.setEstadoPago(EstadoPago.COMPLETADO);

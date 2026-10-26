@@ -1,6 +1,9 @@
 package com.clinica.real.madrid.backend_citas.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.Authentication;
+import com.clinica.real.madrid.backend_citas.security.UsuarioPrincipal;
+import com.clinica.real.madrid.backend_citas.model.Cita;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +42,8 @@ public class TeleconsultaController {
     public ResponseEntity<Map<String, String>> getConfig(
             @RequestParam(value = "canal", required = false) String canal,
             @RequestParam(value = "rol", required = false) String rol,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            Authentication auth) {
 
         String ip = httpRequest.getHeader("X-Forwarded-For");
         if (ip == null || ip.isBlank()) {
@@ -110,7 +114,26 @@ public class TeleconsultaController {
                 if (canal.startsWith("cita-")) {
                     try {
                         Long cId = Long.parseLong(canal.substring(5));
-                        citaService.obtenerPorId(cId);
+                        Cita cita = citaService.obtenerPorId(cId);
+                        
+                        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                            config.put("agoraToken", "NO_AUTORIZADO");
+                            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(config);
+                        }
+                        
+                        boolean esStaff = auth.getAuthorities().stream().anyMatch(a -> 
+                            a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION"));
+                        
+                        if (!esStaff && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+                            boolean esPaciente = cita.getPaciente() != null && cita.getPaciente().getId().equals(principal.getId());
+                            boolean esMedico = cita.getMedico() != null && cita.getMedico().getUsuario() != null 
+                                && cita.getMedico().getUsuario().getId().equals(principal.getId());
+                            
+                            if (!esPaciente && !esMedico) {
+                                config.put("agoraToken", "ACCESO_DENEGADO");
+                                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(config);
+                            }
+                        }
                     } catch (Exception e) {
                         config.put("agoraToken", "CITA_NO_VALIDA");
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);

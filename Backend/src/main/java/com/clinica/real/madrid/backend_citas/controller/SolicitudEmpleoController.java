@@ -12,14 +12,41 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/solicitudes")
-
 public class SolicitudEmpleoController {
+
+    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.List<Long>> peticionesPorIp = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int MAX_SOLICITUDES_POR_10_MIN = 5;
 
     @Autowired
     private SolicitudEmpleoService solicitudService;
 
     @PostMapping
-    public ResponseEntity<SolicitudEmpleo> enviarSolicitud(@RequestBody SolicitudEmpleo solicitud) {
+    public ResponseEntity<?> enviarSolicitud(@RequestBody SolicitudEmpleo solicitud, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        String ip = httpRequest.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) {
+            ip = httpRequest.getRemoteAddr();
+        } else {
+            ip = ip.split(",")[0].trim();
+        }
+
+        long ahora = System.currentTimeMillis();
+        if (peticionesPorIp.size() > 1000) {
+            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 600_000);
+        }
+
+        boolean bloqueado = peticionesPorIp.compute(ip, (k, lista) -> {
+            if (lista == null) { lista = new java.util.ArrayList<>(); }
+            lista.removeIf(ts -> (ahora - ts) > 600_000);
+            if (lista.size() >= MAX_SOLICITUDES_POR_10_MIN) { return lista; }
+            lista.add(ahora);
+            return lista;
+        }).size() > MAX_SOLICITUDES_POR_10_MIN;
+
+        if (bloqueado) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Demasiadas solicitudes enviadas. Por favor espere unos minutos."));
+        }
+
         return ResponseEntity.ok(solicitudService.enviarSolicitud(solicitud));
     }
 

@@ -45,6 +45,7 @@ public class SolicitudEmpleoService {
             solicitudRepository.existsByDniAndEstado(solicitud.getDni(), SolicitudEmpleo.EstadoSolicitud.PENDIENTE)) {
             throw new BadRequestException("Ya existe una postulación pendiente con este número de DNI.");
         }
+        solicitud.setId(null);
         solicitud.setEstado(SolicitudEmpleo.EstadoSolicitud.PENDIENTE);
         return solicitudRepository.save(solicitud);
     }
