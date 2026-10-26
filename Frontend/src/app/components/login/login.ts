@@ -1,10 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { UsuarioService } from '../../services/usuario.service';
 import { LoginController } from '../../controller/login.controller';
-import { EventEmitter, Output } from '@angular/core';
 import { NotificationService } from '../../services/notification.service';
 
 @Component({
@@ -14,9 +13,20 @@ import { NotificationService } from '../../services/notification.service';
   templateUrl: './login.html',
   styleUrls: ['./login.css']
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   @Output() loginExitoso = new EventEmitter<void>();
   ctrl: LoginController;
+
+  private readonly doctoresLogin: string[] = [
+    '/assets/images/DoctorLogin.webp',
+    '/assets/images/DoctorLogin2.webp',
+    '/assets/images/DoctorLogin3.webp'
+  ];
+
+  doctorActual: string = '/assets/images/DoctorLogin.webp';
+  desvanecerDoctor: boolean = false;
+  private intervaloCambio: any = null;
+  private indiceActual: number = 0;
 
   private readonly GOOGLE_CLIENT_ID = '473447043826-0d5crfghn3m7cug1ibfefnr24lsmp5g8.apps.googleusercontent.com';
   private readonly REDIRECT_URI = `${window.location.origin}/auth/google/callback`;
@@ -29,7 +39,64 @@ export class LoginComponent implements OnInit {
     this.ctrl = new LoginController(this.usuarioService, this.router, this.loginExitoso, this.ns);
   }
 
-  ngOnInit() {}
+  ngOnInit(): void {
+    // 1. Seleccionar un doctor aleatorio de inicio
+    this.indiceActual = Math.floor(Math.random() * this.doctoresLogin.length);
+    this.doctorActual = this.doctoresLogin[this.indiceActual];
+
+    // 2. Pre-cargar los demás doctores en segundo plano sin competir con LCP inicial
+    this.precargarDoctores();
+
+    // 3. Iniciar rotación periódica respetando preferencias de accesibilidad
+    this.iniciarRotacion();
+  }
+
+  ngOnDestroy(): void {
+    this.detenerRotacion();
+  }
+
+  private precargarDoctores(): void {
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        this.doctoresLogin.forEach(src => {
+          if (src !== this.doctorActual) {
+            const img = new Image();
+            img.src = src;
+          }
+        });
+      }, 1500);
+    }
+  }
+
+  private iniciarRotacion(): void {
+    if (typeof window === 'undefined') return;
+
+    // Accesibilidad WCAG (Axe/WAVE): si el usuario tiene activo "reducir movimiento", no rotar automáticamente
+    const prefiereMovimientoReducido = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefiereMovimientoReducido) return;
+
+    this.intervaloCambio = setInterval(() => {
+      this.cambiarDoctor();
+    }, 8000); // Rota suavemente cada 8 segundos
+  }
+
+  private detenerRotacion(): void {
+    if (this.intervaloCambio) {
+      clearInterval(this.intervaloCambio);
+      this.intervaloCambio = null;
+    }
+  }
+
+  private cambiarDoctor(): void {
+    this.desvanecerDoctor = true;
+    setTimeout(() => {
+      this.indiceActual = (this.indiceActual + 1) % this.doctoresLogin.length;
+      this.doctorActual = this.doctoresLogin[this.indiceActual];
+      setTimeout(() => {
+        this.desvanecerDoctor = false;
+      }, 50);
+    }, 600); // 600ms coincidiendo con la transición CSS
+  }
 
   loginConGoogle(): void {
     const nonce = Math.random().toString(36).substring(2);
@@ -47,4 +114,3 @@ export class LoginComponent implements OnInit {
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   }
 }
-

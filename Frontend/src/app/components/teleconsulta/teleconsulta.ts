@@ -86,7 +86,7 @@ export class TeleconsultaComponent implements OnInit, OnDestroy {
   obtenerConfiguracion() {
     const canalUID = `cita-${this.citaId}`;
     const token = localStorage.getItem('token');
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
     this.http.get<any>(`${this.apiUrl}/api/teleconsulta/config?canal=${canalUID}&rol=${this.rol}`, { headers }).subscribe({
       next: (config) => {
         this.agoraAppId = config.agoraAppId;
