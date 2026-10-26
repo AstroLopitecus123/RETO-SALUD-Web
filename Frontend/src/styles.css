@@ -189,3 +189,24 @@ body.focus-pro *:focus-visible {
   0% { transform: scale(0.8); opacity: 0.7; }
   100% { transform: scale(2.2); opacity: 0; }
 }
+
+
+/* ==========================================================================
+   Google reCAPTCHA v3: Posicionamiento a la izquierda y ocultado en paneles
+   ========================================================================== */
+.grecaptcha-badge {
+  left: 20px !important;
+  right: auto !important;
+  bottom: 20px !important;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 9990 !important;
+}
+
+/* Ocultar reCAPTCHA automáticamente en dashboards / paneles o con sesión activa */
+body.en-panel .grecaptcha-badge,
+body.usuario-logueado .grecaptcha-badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

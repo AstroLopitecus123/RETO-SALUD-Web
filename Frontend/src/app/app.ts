@@ -129,6 +129,10 @@ export class AppComponent {
 
       this.usuario = null;
       this.isLoggedIn = false;
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('usuario-logueado');
+        document.body.classList.remove('en-panel');
+      }
       console.log(' Sesión limpiada correctamente tras navegación');
     });
   }
@@ -145,6 +149,18 @@ export class AppComponent {
 
   private actualizarEstadoPanel(url: string) {
     this.isPanelRoute = this.checkIfUrlIsPanel(url);
+    if (typeof document !== 'undefined') {
+      if (this.isPanelRoute) {
+        document.body.classList.add('en-panel');
+      } else {
+        document.body.classList.remove('en-panel');
+      }
+      if (this.isLoggedIn) {
+        document.body.classList.add('usuario-logueado');
+      } else {
+        document.body.classList.remove('usuario-logueado');
+      }
+    }
     console.log(' Estado Panel Actualizado:', this.isPanelRoute, 'para URL:', url);
   }
 
@@ -172,6 +188,9 @@ export class AppComponent {
 
         this.usuario = parsedUsuario;
         this.isLoggedIn = true;
+        if (typeof document !== 'undefined') {
+          document.body.classList.add('usuario-logueado');
+        }
 
         if (this.usuario['configuracionVisual']) {
           this.aplicarFiltroGlobal(this.usuario['configuracionVisual']);
@@ -185,6 +204,9 @@ export class AppComponent {
       console.log('⚠️ No hay usuario en localStorage');
       this.usuario = null;
       this.isLoggedIn = false;
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('usuario-logueado');
+      }
 
       const filtroAnon = localStorage.getItem('accesibilidad-filtro');
       if (filtroAnon) this.aplicarFiltroGlobal(filtroAnon);

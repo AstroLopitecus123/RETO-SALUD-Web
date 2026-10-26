@@ -22,3 +22,6 @@ scratch_*.json
 **/dist/
 node_modules/
 .angular/
+
+# Carpeta de recursos alternativos locales
+Frontend/src/assets/images/OTROS/

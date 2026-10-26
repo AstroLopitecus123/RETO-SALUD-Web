@@ -29,8 +29,8 @@
 .doctor-container {
   position: absolute;
   bottom: 0;
-  left: -40px;
-  height: 105%; /* Aumentado para que no se vea pequeño */
+  left: -20px;
+  height: 88%;
   z-index: 2;
   display: flex;
   align-items: flex-end;
