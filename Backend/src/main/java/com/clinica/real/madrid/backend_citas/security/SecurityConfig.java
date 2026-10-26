@@ -51,11 +51,9 @@ public class SecurityConfig {
                     "/api/paises/**",
                     "/api/chatbot/**",
                     "/api/especialidades",
-                    "/api/teleconsulta/config",
-                    "/api/teleconsulta/debug"
+                    "/api/teleconsulta/config"
                 ).permitAll()
                 .requestMatchers("/api/disponibilidades/medico/*/rango").permitAll()
-                .requestMatchers("/api/medicos").permitAll()
                 .requestMatchers("/api/medicos/top4").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/solicitudes").permitAll()
                 .anyRequest().authenticated()
@@ -91,4 +89,3 @@ public class SecurityConfig {
         return source;
     }
 }
-

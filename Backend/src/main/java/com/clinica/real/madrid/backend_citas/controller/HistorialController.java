@@ -3,6 +3,7 @@ package com.clinica.real.madrid.backend_citas.controller;
 import com.clinica.real.madrid.backend_citas.model.Historial;
 import com.clinica.real.madrid.backend_citas.service.HistorialService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,7 @@ public class HistorialController {
     }
 
     @PostMapping("/{citaId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO')")
     public ResponseEntity<Historial> registrarHistorial(
             @PathVariable Long citaId,
             @RequestBody Historial historial) {
@@ -32,6 +34,7 @@ public class HistorialController {
     }
 
     @GetMapping("/cita/{citaId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
     public ResponseEntity<Historial> obtenerPorCita(@PathVariable Long citaId) {
         return historialService.obtenerPorCita(citaId)
                 .map(ResponseEntity::ok)
@@ -39,11 +42,13 @@ public class HistorialController {
     }
 
     @GetMapping("/paciente/{pacienteId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or #pacienteId == authentication.principal.id")
     public List<Historial> obtenerPorPaciente(@PathVariable Long pacienteId) {
         return historialService.listarPorPaciente(pacienteId);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION') or hasRole('PACIENTE')")
     public ResponseEntity<Historial> obtenerPorId(@PathVariable Long id) {
         return historialService.obtenerPorId(id)
                 .map(ResponseEntity::ok)
@@ -51,16 +56,19 @@ public class HistorialController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION')")
     public List<Historial> listarTodos() {
         return historialService.listarTodos();
     }
 
     @GetMapping("/todas-con-citas")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO') or hasRole('RECEPCION')")
     public List<Historial> listarTodasConCitas() {
         return historialService.listarTodasConCitas();
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO')")
     public ResponseEntity<Historial> actualizarHistorial(
             @PathVariable Long id,
             @RequestBody Historial historial) {
@@ -68,6 +76,7 @@ public class HistorialController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO')")
     public ResponseEntity<Void> eliminarHistorial(@PathVariable Long id) {
         historialService.eliminarHistorial(id);
         return ResponseEntity.noContent().build();

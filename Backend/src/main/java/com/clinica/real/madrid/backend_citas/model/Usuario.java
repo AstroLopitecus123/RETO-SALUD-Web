@@ -6,6 +6,9 @@ import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,6 +40,7 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 100)
     private String correo;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(nullable = false, length = 255)
     private String contrasena;
 
@@ -73,9 +77,11 @@ public class Usuario {
     )
     private Set<Especialidad> especialidades;
 
+    @JsonIgnore
     @Column(name = "token_recuperacion")
     private String tokenRecuperacion;
 
+    @JsonIgnore
     @Column(name = "token_expira")
     private LocalDateTime tokenExpira;
 

@@ -32,6 +32,7 @@ public class CitaController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO') or hasRole('PACIENTE')")
     public ResponseEntity<?> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.obtenerPorId(id));
     }
@@ -55,12 +56,14 @@ public class CitaController {
     }
 
     @GetMapping("/usuario/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO') or #id == authentication.principal.id")
     public ResponseEntity<?> listarCitasPorUsuario(@PathVariable Long id) {
         List<Cita> citas = citaService.obtenerCitasPorPaciente(id);
         return ResponseEntity.ok(citas);
     }
 
     @GetMapping("/medico/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO')")
     public ResponseEntity<?> listarCitasPorMedico(@PathVariable Long id) {
         List<Cita> citas = citaService.obtenerCitasPorMedico(id);
         return ResponseEntity.ok(citas);

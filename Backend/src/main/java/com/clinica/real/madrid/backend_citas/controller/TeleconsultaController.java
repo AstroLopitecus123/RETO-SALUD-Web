@@ -22,11 +22,6 @@ public class TeleconsultaController {
     @Value("${DEEPGRAM_API_KEY:}")
     private String deepgramApiKey;
 
-    @GetMapping("/debug")
-    public ResponseEntity<Map<String, String>> debug() {
-        return ResponseEntity.ok(System.getenv());
-    }
-
     @SuppressWarnings("java:S6813")
     @org.springframework.beans.factory.annotation.Autowired
     private com.clinica.real.madrid.backend_citas.service.CitaService citaService;

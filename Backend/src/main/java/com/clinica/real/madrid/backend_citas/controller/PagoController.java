@@ -52,6 +52,7 @@ public class PagoController {
     }
 
     @GetMapping("/cita/{citaId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO') or hasRole('PACIENTE')")
     public ResponseEntity<List<PagoResponse>> obtenerPagosPorCita(@PathVariable Long citaId) {
         List<PagoResponse> response = pagoService.obtenerPagosPorCita(citaId);
         return ResponseEntity.ok(response);
@@ -71,11 +72,13 @@ public class PagoController {
     }
 
     @GetMapping("/paciente/{usuarioId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or #usuarioId == authentication.principal.id")
     public ResponseEntity<List<PagoResponse>> obtenerPagosPorUsuario(@PathVariable Long usuarioId) {
         return ResponseEntity.ok(pagoService.obtenerPagosPorUsuario(usuarioId));
     }
 
     @GetMapping("/medico/{medicoId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO')")
     public ResponseEntity<List<PagoResponse>> obtenerPagosPorMedico(@PathVariable Long medicoId) {
         return ResponseEntity.ok(pagoService.obtenerPagosPorMedico(medicoId));
     }

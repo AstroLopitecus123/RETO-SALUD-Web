@@ -85,6 +85,10 @@ public class UsuarioService {
         return usuarioRepository.findAll();
     }
 
+    public boolean existePorCorreo(String correo) {
+        return usuarioRepository.existsByCorreo(correo);
+    }
+
     public Usuario obtenerUsuarioPorId(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario con ID " + id + " no encontrado"));

@@ -107,7 +107,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            boolean existe = usuarioService.listarUsuarios().stream().anyMatch(u -> u.getCorreo().equalsIgnoreCase(correo));
+            boolean existe = usuarioService.existePorCorreo(correo);
             if (existe) {
                 int intentos = intentosFallidosMap.getOrDefault(correo, 0) + 1;
                 intentosFallidosMap.put(correo, intentos);
