@@ -8,6 +8,8 @@ import com.clinica.real.madrid.backend_citas.security.JwtUtil;
 import com.clinica.real.madrid.backend_citas.service.UsuarioService;
 
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +28,8 @@ public class AuthController {
     private static final Map<String, Integer> intentosFallidosMap = new ConcurrentHashMap<>();
     private static final Map<String, LocalDateTime> bloqueoExpiraMap = new ConcurrentHashMap<>();
     private static final Map<String, Long> cooldownRecuperacionMap = new ConcurrentHashMap<>();
+    private static final Map<String, List<Long>> loginIntentosPorIp = new ConcurrentHashMap<>();
+    private static final int MAX_LOGIN_POR_MINUTO = 30;
 
     @Autowired
     private UsuarioService usuarioService;
@@ -66,7 +70,25 @@ public class AuthController {
 
     @PostMapping("/login")
     @SuppressWarnings("java:S6098")
-    public ResponseEntity<?> login(@RequestBody UsuarioLoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody UsuarioLoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        String ip = httpRequest.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) {
+            ip = httpRequest.getRemoteAddr();
+        } else {
+            ip = ip.split(",")[0].trim();
+        }
+        long ahora = System.currentTimeMillis();
+        boolean rateLimited = loginIntentosPorIp.compute(ip, (k, lista) -> {
+            if (lista == null) { lista = new ArrayList<>(); }
+            lista.removeIf(ts -> (ahora - ts) > 60_000);
+            if (lista.size() >= MAX_LOGIN_POR_MINUTO) { return lista; }
+            lista.add(ahora);
+            return lista;
+        }).size() > MAX_LOGIN_POR_MINUTO;
+        if (rateLimited) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Demasiados intentos de inicio de sesion. Por favor espere 1 minuto."));
+        }
         String correo = request.getCorreo() != null ? request.getCorreo().toLowerCase().trim() : "";
         if (correo.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

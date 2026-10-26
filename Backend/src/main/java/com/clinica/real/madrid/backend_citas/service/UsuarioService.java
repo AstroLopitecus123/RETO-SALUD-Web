@@ -259,7 +259,12 @@ public class UsuarioService {
 
         usuario.setNombre(datos.getNombre());
         usuario.setApellido(datos.getApellido());
-        usuario.setCorreo(datos.getCorreo());
+        if (datos.getCorreo() != null && !datos.getCorreo().trim().equalsIgnoreCase(usuario.getCorreo().trim())) {
+            if (usuarioRepository.existsByCorreo(datos.getCorreo().trim().toLowerCase())) {
+                throw new BadRequestException("El correo electronico ya esta registrado por otra cuenta");
+            }
+            usuario.setCorreo(datos.getCorreo().trim().toLowerCase());
+        }
         usuario.setTelefono(datos.getTelefono());
         usuario.setFechaNacimiento(datos.getFechaNacimiento());
         usuario.setDni(datos.getDni());

@@ -66,6 +66,7 @@ public class UsuarioController {
     }
 
     @PostMapping("/registrar")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Usuario> registrarUsuario(@RequestBody UsuarioRegistroRequest request) {
         Usuario usuario = usuarioService.registrarUsuario(request);
         usuario.setContrasena(null);
@@ -150,6 +151,16 @@ public class UsuarioController {
             @PathVariable Long id,
             @RequestParam("archivo") MultipartFile archivo) {
         try {
+        if (archivo == null || archivo.isEmpty()) {
+            return ResponseEntity.badRequest().body("El archivo no puede estar vacio.");
+        }
+        String contentType = archivo.getContentType();
+        if (contentType == null || (!contentType.equalsIgnoreCase("image/jpeg") && !contentType.equalsIgnoreCase("image/png") && !contentType.equalsIgnoreCase("image/webp"))) {
+            return ResponseEntity.badRequest().body("Solo se permiten imagenes en formato JPEG, PNG o WebP.");
+        }
+        if (archivo.getSize() > 5 * 1024 * 1024) {
+            return ResponseEntity.badRequest().body("La imagen no debe superar los 5 MB.");
+        }
             Map uploadResult = cloudinaryService.upload(archivo);
             String secureUrl = (String) uploadResult.get("secure_url");
             Usuario usuario = usuarioService.actualizarFoto(id, secureUrl);

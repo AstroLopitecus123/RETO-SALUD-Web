@@ -2,6 +2,7 @@ package com.clinica.real.madrid.backend_citas.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -35,7 +36,7 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
-    @SuppressWarnings("java:S4502")
+    @SuppressWarnings("java:S4507")
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -44,20 +45,23 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(
                     "/auth/**",
-                    "/api/paises/**",
                     "/api/chatbot/**",
                     "/api/especialidades",
                     "/api/teleconsulta/config"
                 ).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/paises/**").permitAll()
                 .requestMatchers("/api/disponibilidades/medico/*/rango").permitAll()
                 .requestMatchers("/api/medicos/top4").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/solicitudes").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/solicitudes").permitAll()
                 .anyRequest().authenticated()
             )
-            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())
+                .contentTypeOptions(org.springframework.security.config.Customizer.withDefaults())
+            );
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
@@ -74,8 +78,6 @@ public class SecurityConfig {
             "http://www.reto-salud.online",
             "http://reto-salud.online",
             "https://frontend-citas-production.up.railway.app",
-            "https://*.railway.app",
-            "https://*.up.railway.app",
             "http://localhost:4200",
             "http://localhost:3000"
         ));
