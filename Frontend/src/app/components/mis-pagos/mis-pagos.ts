@@ -152,6 +152,6 @@ export class MisPagosComponent implements OnInit, OnDestroy {
   }
 
   verComprobante(url: string) {
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 }

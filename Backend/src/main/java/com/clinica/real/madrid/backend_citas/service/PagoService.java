@@ -198,7 +198,7 @@ public class PagoService {
                 throw new BadRequestException("Esta transaccion de pago ya fue procesada anteriormente");
             }
             // Validacion obligatoria con Stripe
-            if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_")) {
+            if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_") && !stripeSecretKey.contains("dummy")) {
                 if (request.getReferencia() == null || request.getReferencia().trim().isEmpty()) {
                     throw new BadRequestException("Referencia de transaccion de Stripe requerida");
                 }

@@ -4,6 +4,7 @@ import com.clinica.real.madrid.backend_citas.dto.PasswordChangeRequest;
 import com.clinica.real.madrid.backend_citas.dto.UsuarioRegistroRequest;
 import com.clinica.real.madrid.backend_citas.model.EstadoUsuario;
 import com.clinica.real.madrid.backend_citas.model.Usuario;
+import com.clinica.real.madrid.backend_citas.security.UsuarioPrincipal;
 import com.clinica.real.madrid.backend_citas.service.UsuarioService;
 import com.clinica.real.madrid.backend_citas.service.CloudinaryService;
 
@@ -184,8 +185,13 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/fcm-token")
-    public ResponseEntity<Void> borrarFcmToken(@RequestParam("token") String token) {
-        usuarioService.borrarFcmToken(token);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> borrarFcmToken(@RequestParam("token") String token, Authentication auth) {
+        if (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            usuarioService.borrarFcmToken(token, principal.getId());
+        } else {
+            usuarioService.borrarFcmToken(token);
+        }
         return ResponseEntity.ok().build();
     }
 

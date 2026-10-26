@@ -15,6 +15,8 @@ public interface DispositivoActivoRepository extends JpaRepository<DispositivoAc
     List<DispositivoActivo> findByUsuarioIdOrderByUltimaConexionDesc(Long usuarioId);
     
     void deleteByFcmToken(String fcmToken);
+
+    void deleteByFcmTokenAndUsuarioId(String fcmToken, Long usuarioId);
     
     void deleteByUsuarioId(Long usuarioId);
 }

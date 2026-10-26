@@ -14,22 +14,25 @@ import java.util.Map;
 @Service
 public class RecaptchaService {
 
-    @Value("${recaptcha.secret-key:dummy_recaptcha_secret}")
+    @Value("${recaptcha.secret-key:}")
     private String recaptchaSecretKey;
 
-    @Value("${recaptcha.enabled:true}")
+    @Value("${recaptcha.enabled:false}")
     private boolean recaptchaEnabled;
 
     private static final String RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
-    // Bypass eliminado por seguridad
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public boolean validarToken(String token) {
-        if (!recaptchaEnabled || recaptchaSecretKey == null || recaptchaSecretKey.isBlank() || "dummy_recaptcha_secret".equals(recaptchaSecretKey)) {
+        boolean estaConfigurado = recaptchaSecretKey != null && !recaptchaSecretKey.isBlank() && !recaptchaSecretKey.contains("dummy");
+
+        // Si no está habilitado ni configurado (ej. desarrollo o pruebas locales sin credenciales), se omite
+        if (!recaptchaEnabled && !estaConfigurado) {
             return true;
         }
 
+        // Si está habilitado o configurado en producción, validación estricta (fail-closed)
         if (token == null || token.trim().isEmpty()) {
             return false;
         }

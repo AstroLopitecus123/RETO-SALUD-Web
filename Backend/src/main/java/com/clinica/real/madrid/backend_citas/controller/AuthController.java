@@ -183,12 +183,14 @@ public class AuthController {
         }
             Long ultimoEnvio = cooldownRecuperacionMap.get(correo);
             if (ultimoEnvio != null && (ahora - ultimoEnvio < 60_000)) {
-                return ResponseEntity.ok(Map.of("mensaje", "Ya enviamos un correo recientemente. Por favor espera 1 minuto antes de solicitar otro."));
+                return ResponseEntity.ok(Map.of("mensaje", "Si el correo está registrado, se han enviado las instrucciones para restablecer tu contraseña."));
             }
             cooldownRecuperacionMap.put(correo, ahora);
         }
-        usuarioService.enviarCorreoRecuperacion(correo);
-        return ResponseEntity.ok(Map.of("mensaje", "Correo de recuperación enviado correctamente."));
+        try {
+            usuarioService.enviarCorreoRecuperacion(correo);
+        } catch (Exception ignored) {}
+        return ResponseEntity.ok(Map.of("mensaje", "Si el correo está registrado, se han enviado las instrucciones para restablecer tu contraseña."));
     }
 
     @PostMapping("/restablecer")

@@ -311,11 +311,16 @@ public class UsuarioService {
     }
 
     public void enviarCorreoRecuperacion(String correo) {
-        Usuario usuario = usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new RuntimeException("No existe un usuario con ese correo."));
-
+        if (correo == null || correo.isBlank()) {
+            return;
+        }
+        java.util.Optional<Usuario> usuarioOpt = usuarioRepository.findByCorreo(correo.toLowerCase().trim());
+        if (usuarioOpt.isEmpty()) {
+            return;
+        }
+        Usuario usuario = usuarioOpt.get();
         if (usuario.getEstado() == EstadoUsuario.DESACTIVADO) {
-            throw new RuntimeException("El usuario está desactivado y no puede recuperar contraseña.");
+            return;
         }
 
         String token = UUID.randomUUID().toString();
@@ -402,9 +407,17 @@ public class UsuarioService {
 
     @Transactional
     public void borrarFcmToken(String fcmToken) {
+        borrarFcmToken(fcmToken, null);
+    }
+
+    @Transactional
+    public void borrarFcmToken(String fcmToken, Long usuarioId) {
         if (fcmToken != null && !fcmToken.trim().isEmpty()) {
-            dispositivoActivoRepository.deleteByFcmToken(fcmToken);
-            System.out.println("🔒 Privacidad Médica: Token de dispositivo borrado por Logout voluntario.");
+            if (usuarioId != null) {
+                dispositivoActivoRepository.deleteByFcmTokenAndUsuarioId(fcmToken, usuarioId);
+            } else {
+                dispositivoActivoRepository.deleteByFcmToken(fcmToken);
+            }
         }
     }
 
