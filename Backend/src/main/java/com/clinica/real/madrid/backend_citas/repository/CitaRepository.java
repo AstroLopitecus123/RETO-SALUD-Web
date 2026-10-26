@@ -54,5 +54,7 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     List<Cita> findByEstadoOrderByFechaDesc(EstadoCita estado);
 
+    List<Cita> findByEstadoAndFechaCreacionBefore(EstadoCita estado, LocalDateTime limite);
+
     List<Cita> findByPacienteIdAndEstadoOrderByFechaDesc(Long pacienteId, EstadoCita estado);
 }

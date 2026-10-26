@@ -8,4 +8,6 @@ import java.util.List;
 @Repository
 public interface SolicitudEmpleoRepository extends JpaRepository<SolicitudEmpleo, Long> {
     List<SolicitudEmpleo> findByEstado(SolicitudEmpleo.EstadoSolicitud estado);
+    boolean existsByCorreoAndEstado(String correo, SolicitudEmpleo.EstadoSolicitud estado);
+    boolean existsByDniAndEstado(String dni, SolicitudEmpleo.EstadoSolicitud estado);
 }

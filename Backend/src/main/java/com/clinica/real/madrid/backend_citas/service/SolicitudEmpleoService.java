@@ -32,8 +32,18 @@ public class SolicitudEmpleoService {
     private PasswordEncoder passwordEncoder;
 
     public SolicitudEmpleo enviarSolicitud(SolicitudEmpleo solicitud) {
+        if (solicitud.getCorreo() == null || solicitud.getCorreo().isBlank()) {
+            throw new BadRequestException("El correo electrónico es obligatorio.");
+        }
         if (usuarioRepository.existsByCorreo(solicitud.getCorreo())) {
             throw new BadRequestException("Ya existe un usuario con ese correo electrónico.");
+        }
+        if (solicitudRepository.existsByCorreoAndEstado(solicitud.getCorreo(), SolicitudEmpleo.EstadoSolicitud.PENDIENTE)) {
+            throw new BadRequestException("Ya cuentas con una postulación pendiente de revisión.");
+        }
+        if (solicitud.getDni() != null && !solicitud.getDni().isBlank() &&
+            solicitudRepository.existsByDniAndEstado(solicitud.getDni(), SolicitudEmpleo.EstadoSolicitud.PENDIENTE)) {
+            throw new BadRequestException("Ya existe una postulación pendiente con este número de DNI.");
         }
         solicitud.setEstado(SolicitudEmpleo.EstadoSolicitud.PENDIENTE);
         return solicitudRepository.save(solicitud);
@@ -77,7 +87,5 @@ public class SolicitudEmpleoService {
 
         Rol rolDestino = solicitud.getPuesto() == SolicitudEmpleo.Puesto.MEDICO ? Rol.MEDICO : Rol.RECEPCION;
         usuarioService.actualizarRol(usuario.getId(), rolDestino.name());
-
-        System.out.println(" Usuario creado desde solicitud. Pass temporal: " + tempPass);
     }
 }

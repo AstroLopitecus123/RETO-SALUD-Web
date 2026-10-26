@@ -37,7 +37,10 @@ public class PagoController {
 
     @PostMapping("/promesa-efectivo")
     @PreAuthorize("hasRole('PACIENTE')")
-    public ResponseEntity<PagoResponse> prometerEfectivo(@RequestBody PagoEfectivoRequest request) {
+    public ResponseEntity<PagoResponse> prometerEfectivo(@RequestBody PagoEfectivoRequest request, Authentication auth) {
+        if (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+            request.setUsuarioId(principal.getId());
+        }
         PagoResponse response = pagoService.prometerPagoEfectivo(request);
         return ResponseEntity.ok(response);
     }

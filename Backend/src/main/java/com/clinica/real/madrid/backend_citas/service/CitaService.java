@@ -311,6 +311,19 @@ public class CitaService {
         }
     }
 
+        @Scheduled(fixedRate = 300000)
+    public void liberarCitasPendientesAbandonadas() {
+        LocalDateTime limite = LocalDateTime.now(java.time.ZoneId.systemDefault()).minusMinutes(15);
+        List<Cita> abandonadas = citaRepository.findByEstadoAndFechaCreacionBefore(EstadoCita.PENDIENTE, limite);
+        for (Cita cita : abandonadas) {
+            try {
+                cancelarCitaInterno(cita.getId(), false);
+            } catch (Exception e) {
+                System.err.println("Error al liberar cita abandonada ID " + cita.getId() + ": " + e.getMessage());
+            }
+        }
+    }
+
     private void enviarRecordatorio(Cita cita) {
         String fecha = cita.getFecha().toLocalDate().toString();
         String hora = cita.getFecha().toLocalTime().toString();

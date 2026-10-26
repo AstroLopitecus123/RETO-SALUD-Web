@@ -151,11 +151,14 @@ public class PagoService {
         pago.setTransaccionId(request.getReferencia());
         pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
 
-        if (Boolean.TRUE.equals(request.getExito())) {
-            // Validación segura con Stripe si existe clave real configurada
+                if (Boolean.TRUE.equals(request.getExito())) {
+            if (request.getReferencia() != null && !request.getReferencia().trim().isEmpty() && pagoRepository.existsByTransaccionId(request.getReferencia().trim())) {
+                throw new BadRequestException("Esta transaccion de pago ya fue procesada anteriormente");
+            }
+            // ValidaciÃ³n segura con Stripe si existe clave real configurada
             if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_") && !"sk_test_tu_clave_dummy".equals(stripeSecretKey)) {
                 if (request.getReferencia() == null || request.getReferencia().trim().isEmpty()) {
-                    throw new BadRequestException("Referencia de transacción de Stripe requerida");
+                    throw new BadRequestException("Referencia de transaccion de Stripe requerida");
                 }
                 try {
                     PaymentIntent intent = PaymentIntent.retrieve(request.getReferencia());
@@ -222,7 +225,7 @@ public class PagoService {
     public void reembolsarPago(Long citaId) {
         List<Pago> pagos = pagoRepository.findByCitaId(citaId);
         if (pagos.isEmpty()) {
-            System.out.println("⚠️ No se encontraron pagos para reembolsar en la cita #" + citaId);
+            System.out.println("âš ï¸ No se encontraron pagos para reembolsar en la cita #" + citaId);
             return;
         }
 
@@ -238,7 +241,7 @@ public class PagoService {
                     System.out.println(" Reembolso exitoso en Stripe. ID: " + refund.getId());
                     pago.setEstadoPago(EstadoPago.REEMBOLSADO);
                 } catch (StripeException e) {
-                    System.err.println("❌ Error de Stripe al reembolsar pago #" + pago.getId() + ": " + e.getMessage());
+                    System.err.println("âŒ Error de Stripe al reembolsar pago #" + pago.getId() + ": " + e.getMessage());
 
                 }
             } else {

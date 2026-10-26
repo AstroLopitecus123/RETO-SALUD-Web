@@ -67,6 +67,9 @@ public class UsuarioService {
     @Value("${google.client.id}")
     private String googleClientId;
 
+    @Value("${app.frontend.url:https://www.reto-salud.online}")
+    private String frontendUrl;
+
     private final JavaMailSender mailSender;
 
     @Autowired
@@ -287,7 +290,7 @@ public class UsuarioService {
         usuario.setTokenExpira(LocalDateTime.now(java.time.ZoneId.systemDefault()).plusHours(1));
         usuarioRepository.save(usuario);
 
-        String enlace = "http://localhost:4200/restablecer?token=" + token;
+        String enlace = frontendUrl + "/restablecer?token=" + token;
 
         SimpleMailMessage mensaje = new SimpleMailMessage();
         mensaje.setTo(usuario.getCorreo());
