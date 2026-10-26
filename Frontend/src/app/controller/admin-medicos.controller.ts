@@ -123,10 +123,26 @@ export class AdminMedicosController {
     this.nombreEditado = medico.nombre;
     this.apellidoEditado = medico.apellido;
     this.correoEditado = medico.correo;
-    this.telefonoEditado = medico.telefono;
-    this.dniEditado = medico.dni;
+    this.telefonoEditado = medico.telefono || '';
+    this.dniEditado = medico.dni || '';
     this.fotoUrlEditado = medico.fotoUrl;
     this.mostrandoModalEditarPerfil = true;
+
+    this.usuarioService.obtenerUsuario(medico.id).subscribe({
+      next: (u: any) => {
+        if (u) {
+          if (u.telefono) this.telefonoEditado = u.telefono;
+          if (u.dni) this.dniEditado = u.dni;
+          if (u.nombre) this.nombreEditado = u.nombre;
+          if (u.apellido) this.apellidoEditado = u.apellido;
+          if (u.correo) this.correoEditado = u.correo;
+          if (u.fotoUrl) this.fotoUrlEditado = u.fotoUrl;
+          if (u.pais) this.medicoSeleccionado.pais = u.pais;
+          if (u.fechaNacimiento) this.medicoSeleccionado.fechaNacimiento = u.fechaNacimiento;
+        }
+      },
+      error: () => {}
+    });
   }
 
   cerrarModalEditarPerfil() {
@@ -172,12 +188,17 @@ export class AdminMedicosController {
     }
 
     const datosActualizados = new UsuarioFull(this.medicoSeleccionado);
-    datosActualizados.nombre = this.nombreEditado;
-    datosActualizados.apellido = this.apellidoEditado;
-    datosActualizados.correo = this.correoEditado;
-    datosActualizados.telefono = this.telefonoEditado;
-    datosActualizados.dni = this.dniEditado;
+    datosActualizados.nombre = this.nombreEditado.trim();
+    datosActualizados.apellido = this.apellidoEditado.trim();
+    datosActualizados.correo = this.correoEditado.trim();
+    datosActualizados.telefono = (this.telefonoEditado || '').trim();
+    datosActualizados.dni = (this.dniEditado || '').trim();
     datosActualizados.fotoUrl = this.fotoUrlEditado;
+    if (this.medicoSeleccionado.pais && this.medicoSeleccionado.pais.id > 0) {
+      datosActualizados.pais = this.medicoSeleccionado.pais;
+    } else {
+      delete (datosActualizados as any).pais;
+    }
 
     this.usuarioService.actualizarUsuario(datosActualizados).subscribe({
       next: (updated) => {

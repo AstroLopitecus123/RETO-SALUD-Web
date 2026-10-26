@@ -285,23 +285,39 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        usuario.setNombre(datos.getNombre());
-        usuario.setApellido(datos.getApellido());
+        if (datos.getNombre() != null && !datos.getNombre().trim().isEmpty()) {
+            usuario.setNombre(datos.getNombre().trim());
+        }
+        if (datos.getApellido() != null && !datos.getApellido().trim().isEmpty()) {
+            usuario.setApellido(datos.getApellido().trim());
+        }
         if (datos.getCorreo() != null && !datos.getCorreo().trim().equalsIgnoreCase(usuario.getCorreo().trim())) {
             if (usuarioRepository.existsByCorreo(datos.getCorreo().trim().toLowerCase())) {
                 throw new BadRequestException("El correo electronico ya esta registrado por otra cuenta");
             }
             usuario.setCorreo(datos.getCorreo().trim().toLowerCase());
         }
-        usuario.setTelefono(datos.getTelefono());
-        usuario.setFechaNacimiento(datos.getFechaNacimiento());
-        usuario.setDni(datos.getDni());
+        if (datos.getTelefono() != null) {
+            usuario.setTelefono(datos.getTelefono().trim());
+        }
+        if (datos.getFechaNacimiento() != null) {
+            usuario.setFechaNacimiento(datos.getFechaNacimiento());
+        }
+        if (datos.getDni() != null) {
+            String dniStr = datos.getDni().trim();
+            if (!dniStr.isEmpty()) {
+                if (!dniStr.equalsIgnoreCase(usuario.getDni()) && usuarioRepository.existsByDni(dniStr)) {
+                    throw new BadRequestException("El DNI ya esta registrado por otra cuenta");
+                }
+                usuario.setDni(dniStr);
+            }
+        }
         
-        if (datos.getFotoUrl() != null) {
-            usuario.setFotoUrl(datos.getFotoUrl());
+        if (datos.getFotoUrl() != null && !datos.getFotoUrl().trim().isEmpty()) {
+            usuario.setFotoUrl(datos.getFotoUrl().trim());
         }
 
-        if (datos.getPais() != null && datos.getPais().getId() != null) {
+        if (datos.getPais() != null && datos.getPais().getId() != null && datos.getPais().getId() > 0) {
             Pais pais = paisRepository.findById(datos.getPais().getId())
                     .orElseThrow(() -> new RuntimeException("País no encontrado"));
             usuario.setPais(pais);
