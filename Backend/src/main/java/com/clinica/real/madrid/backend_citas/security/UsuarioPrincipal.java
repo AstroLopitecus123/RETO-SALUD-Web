@@ -14,12 +14,18 @@ public class UsuarioPrincipal implements UserDetails {
     private final String email;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
+    private final boolean activo;
 
     public UsuarioPrincipal(Long id, String email, String password, Collection<? extends GrantedAuthority> authorities) {
+        this(id, email, password, authorities, true);
+    }
+
+    public UsuarioPrincipal(Long id, String email, String password, Collection<? extends GrantedAuthority> authorities, boolean activo) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.authorities = authorities;
+        this.activo = activo;
     }
 
     public static UsuarioPrincipal fromUsuario(Usuario usuario) {
@@ -29,11 +35,13 @@ public class UsuarioPrincipal implements UserDetails {
                 new SimpleGrantedAuthority("ROLE_" + rol)
         );
 
+        boolean activo = usuario.getEstado() == null || usuario.getEstado() != com.clinica.real.madrid.backend_citas.model.EstadoUsuario.DESACTIVADO;
         return new UsuarioPrincipal(
                 usuario.getId(),
                 usuario.getCorreo(),
                 usuario.getContrasena(),
-                authorities
+                authorities,
+                activo
         );
     }
 
@@ -73,6 +81,6 @@ public class UsuarioPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.activo;
     }
 }

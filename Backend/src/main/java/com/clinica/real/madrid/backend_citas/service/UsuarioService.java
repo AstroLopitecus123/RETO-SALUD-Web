@@ -167,9 +167,13 @@ public class UsuarioService {
     }
 
     public Usuario login(String correo, String contrasenaPlain) {
-        return usuarioRepository.findByCorreo(correo)
+        Usuario usuario = usuarioRepository.findByCorreo(correo)
                 .filter(u -> passwordEncoder.matches(contrasenaPlain, u.getContrasena()))
                 .orElseThrow(() -> new BadRequestException("Correo o contraseña incorrectos"));
+        if (usuario.getEstado() == EstadoUsuario.DESACTIVADO) {
+            throw new BadRequestException("Su cuenta se encuentra desactivada. Comuníquese con la administración.");
+        }
+        return usuario;
     }
 
     public Usuario loginConGoogle(String idToken) throws Exception {
@@ -187,7 +191,7 @@ public class UsuarioService {
         String nombre = (String) payload.get("given_name");
         String apellido = (String) payload.get("family_name");
 
-        return usuarioRepository.findByCorreo(email)
+        Usuario usuarioGoogle = usuarioRepository.findByCorreo(email)
                 .orElseGet(() -> {
                     Usuario nuevo = new Usuario();
                     nuevo.setCorreo(email);
@@ -205,6 +209,10 @@ public class UsuarioService {
 
                     return usuarioRepository.save(nuevo);
                 });
+        if (usuarioGoogle.getEstado() == EstadoUsuario.DESACTIVADO) {
+            throw new BadRequestException("Su cuenta se encuentra desactivada. Comuníquese con la administración.");
+        }
+        return usuarioGoogle;
     }
 
     public Usuario actualizarEstado(Long id, EstadoUsuario nuevoEstado) {

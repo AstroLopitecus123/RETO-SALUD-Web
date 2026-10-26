@@ -122,6 +122,10 @@ public class CitaService {
         disp.setEstado(Disponibilidad.EstadoDisponibilidad.NO_DISPONIBLE);
         disponibilidadRepository.save(disp);
 
+        // Proteccion contra Mass Assignment e IDOR: toda nueva cita se crea con ID nuevo y estado PENDIENTE
+        cita.setId(null);
+        cita.setEstado(EstadoCita.PENDIENTE);
+
         return citaRepository.save(cita);
     }
 

@@ -43,6 +43,9 @@ public class ChatbotController {
         }
 
         long ahora = System.currentTimeMillis();
+        if (peticionesPorIp.size() > 1000) {
+            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
+        }
         peticionesPorIp.compute(ip, (k, lista) -> {
             if (lista == null) lista = new ArrayList<>();
             lista.removeIf(t -> ahora - t > 60_000);
@@ -64,8 +67,14 @@ public class ChatbotController {
         if (preguntaUsuario == null || preguntaUsuario.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "La pregunta no puede estar vacía"));
         }
+        if (preguntaUsuario.length() > 500) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La pregunta no puede superar los 500 caracteres"));
+        }
 
-        RestTemplate restTemplate = new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(10000);
+        RestTemplate restTemplate = new RestTemplate(factory);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

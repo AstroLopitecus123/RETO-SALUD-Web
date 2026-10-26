@@ -14,28 +14,24 @@ import java.util.Map;
 @Service
 public class RecaptchaService {
 
-    @Value("${recaptcha.secret-key:6Ld0RgEuAAAAACclJJKS-ryzA7S5kAXiBkfMMeRJ}")
+    @Value("${recaptcha.secret-key:dummy_recaptcha_secret}")
     private String recaptchaSecretKey;
 
     @Value("${recaptcha.enabled:true}")
     private boolean recaptchaEnabled;
 
     private static final String RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
-    private static final String TEST_BYPASS_TOKEN = "TEST_BYPASS_TOKEN";
+    // Bypass eliminado por seguridad
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public boolean validarToken(String token) {
-        if (!recaptchaEnabled) {
+        if (!recaptchaEnabled || recaptchaSecretKey == null || recaptchaSecretKey.isBlank() || "dummy_recaptcha_secret".equals(recaptchaSecretKey)) {
             return true;
         }
 
         if (token == null || token.trim().isEmpty()) {
             return false;
-        }
-
-        if (TEST_BYPASS_TOKEN.equals(token)) {
-            return true;
         }
 
         try {
@@ -58,7 +54,8 @@ public class RecaptchaService {
                 return true;
             }
         } catch (Exception e) {
-            return true;
+            System.err.println("Error al validar reCAPTCHA: " + e.getMessage());
+            return false;
         }
         return false;
     }

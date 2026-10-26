@@ -28,7 +28,7 @@ public class Medico {
 
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false, unique = true)
-    @JsonIgnoreProperties({"medico", "contrasena"})
+    @JsonIgnoreProperties({"medico", "contrasena", "tokenRecuperacion", "tokenExpira", "dni", "telefono", "fechaNacimiento"})
     private Usuario usuario;
 
     @ManyToOne

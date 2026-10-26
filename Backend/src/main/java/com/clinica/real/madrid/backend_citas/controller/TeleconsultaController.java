@@ -49,6 +49,9 @@ public class TeleconsultaController {
         }
 
         long ahora = System.currentTimeMillis();
+        if (peticionesPorIp.size() > 1000) {
+            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
+        }
         boolean bloqueado = peticionesPorIp.compute(ip, (k, lista) -> {
             if (lista == null) {
                 lista = new ArrayList<>();
@@ -104,6 +107,15 @@ public class TeleconsultaController {
                 int expirationTimeInSeconds = 7200;
                 int timestamp = (int)(System.currentTimeMillis() / 1000 + expirationTimeInSeconds);
                 
+                if (canal.startsWith("cita-")) {
+                    try {
+                        Long cId = Long.parseLong(canal.substring(5));
+                        citaService.obtenerPorId(cId);
+                    } catch (Exception e) {
+                        config.put("agoraToken", "CITA_NO_VALIDA");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(config);
+                    }
+                }
                 String result = tokenBuilder.buildTokenWithUid(
                     aId, aCert, canal, 0, io.agora.media.RtcTokenBuilder2.Role.ROLE_PUBLISHER, timestamp, timestamp);
                 

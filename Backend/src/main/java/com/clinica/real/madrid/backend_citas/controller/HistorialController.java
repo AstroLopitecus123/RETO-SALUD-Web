@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/historiales")
@@ -95,14 +96,26 @@ public class HistorialController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO')")
-    public ResponseEntity<Historial> actualizarHistorial(
+    public ResponseEntity<?> actualizarHistorial(
             @PathVariable Long id,
-            @RequestBody Historial historial) {
+            @RequestBody Historial historial,
+            Authentication auth) {
+        if (!auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+            if (auth.getPrincipal() instanceof UsuarioPrincipal principal) {
+                Historial existente = historialService.obtenerPorId(id).orElse(null);
+                if (existente != null && existente.getCita() != null && existente.getCita().getMedico() != null
+                        && existente.getCita().getMedico().getUsuario() != null) {
+                    if (!existente.getCita().getMedico().getUsuario().getId().equals(principal.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No tienes permiso para modificar el historial clinico de otra consulta"));
+                    }
+                }
+            }
+        }
         return ResponseEntity.ok(historialService.actualizarHistorial(id, historial));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MEDICO')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> eliminarHistorial(@PathVariable Long id) {
         historialService.eliminarHistorial(id);
         return ResponseEntity.noContent().build();

@@ -78,6 +78,9 @@ public class AuthController {
             ip = ip.split(",")[0].trim();
         }
         long ahora = System.currentTimeMillis();
+        if (loginIntentosPorIp.size() > 1000) {
+            loginIntentosPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
+        }
         boolean rateLimited = loginIntentosPorIp.compute(ip, (k, lista) -> {
             if (lista == null) { lista = new ArrayList<>(); }
             lista.removeIf(ts -> (ahora - ts) > 60_000);
@@ -175,6 +178,9 @@ public class AuthController {
         if (correo != null) {
             correo = correo.toLowerCase().trim();
             long ahora = System.currentTimeMillis();
+        if (loginIntentosPorIp.size() > 1000) {
+            loginIntentosPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
+        }
             Long ultimoEnvio = cooldownRecuperacionMap.get(correo);
             if (ultimoEnvio != null && (ahora - ultimoEnvio < 60_000)) {
                 return ResponseEntity.ok(Map.of("mensaje", "Ya enviamos un correo recientemente. Por favor espera 1 minuto antes de solicitar otro."));

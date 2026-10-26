@@ -1,5 +1,7 @@
 package com.clinica.real.madrid.backend_citas.service;
 
+import java.math.BigDecimal;
+
 import com.clinica.real.madrid.backend_citas.exception.BadRequestException;
 import com.clinica.real.madrid.backend_citas.dto.*;
 import com.clinica.real.madrid.backend_citas.model.*;
@@ -41,7 +43,12 @@ public class PagoService {
     public PaymentIntentResponse crearPaymentIntent(PaymentIntentRequest request) throws StripeException {
         System.out.println("\uD83D\uDCB3 Creando PaymentIntent para Cita ID: " + request.getCitaId() + " - Monto: S/. " + request.getMonto());
 
-        long montoCentavos = (long) (request.getMonto() * 100);
+        Cita citaParaIntent = citaRepository.findById(request.getCitaId())
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+        Double precioReal = (citaParaIntent.getMedico() != null && citaParaIntent.getMedico().getEspecialidad() != null && citaParaIntent.getMedico().getEspecialidad().getPrecioBase() != null)
+                ? citaParaIntent.getMedico().getEspecialidad().getPrecioBase()
+                : (request.getMonto() != null ? request.getMonto() : 0.0);
+        long montoCentavos = (long) (precioReal * 100);
 
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                 .setAmount(montoCentavos)
@@ -72,7 +79,10 @@ public class PagoService {
         Pago pago = new Pago();
         pago.setCita(cita);
         pago.setUsuario(usuario);
-        pago.setMonto(request.getMonto());
+        BigDecimal precioEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null && cita.getMedico().getEspecialidad().getPrecioBase() != null)
+                ? BigDecimal.valueOf(cita.getMedico().getEspecialidad().getPrecioBase())
+                : request.getMonto();
+        pago.setMonto(precioEfectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
         pago.setEstadoPago(EstadoPago.PENDIENTE); 
         pago.setFechaPago(null);
@@ -117,7 +127,10 @@ public class PagoService {
         Pago pago = new Pago();
         pago.setCita(cita);
         pago.setUsuario(usuario);
-        pago.setMonto(request.getMonto());
+        BigDecimal precioEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null && cita.getMedico().getEspecialidad().getPrecioBase() != null)
+                ? BigDecimal.valueOf(cita.getMedico().getEspecialidad().getPrecioBase())
+                : request.getMonto();
+        pago.setMonto(precioEfectivo);
         pago.setMetodo(MetodoPago.EFECTIVO);
         pago.setEstadoPago(EstadoPago.COMPLETADO);
         pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
@@ -146,7 +159,10 @@ public class PagoService {
         Pago pago = new Pago();
         pago.setCita(cita);
         pago.setUsuario(usuario);
-        pago.setMonto(request.getMonto());
+        BigDecimal precioTarjeta = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null && cita.getMedico().getEspecialidad().getPrecioBase() != null)
+                ? BigDecimal.valueOf(cita.getMedico().getEspecialidad().getPrecioBase())
+                : request.getMonto();
+        pago.setMonto(precioTarjeta);
         pago.setMetodo(MetodoPago.TARJETA);
         pago.setTransaccionId(request.getReferencia());
         pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
@@ -164,6 +180,15 @@ public class PagoService {
                     PaymentIntent intent = PaymentIntent.retrieve(request.getReferencia());
                     if (!"succeeded".equalsIgnoreCase(intent.getStatus())) {
                         throw new BadRequestException("El pago no ha sido completado en Stripe. Estado: " + intent.getStatus());
+                    }
+                    long montoEsperadoCentavos = (long) (precioTarjeta.doubleValue() * 100);
+                    if (intent.getAmount() == null || intent.getAmount() < montoEsperadoCentavos) {
+                        throw new BadRequestException("El monto pagado en Stripe no coincide con el precio de la cita");
+                    }
+                    if (intent.getMetadata() != null && intent.getMetadata().containsKey("citaId")) {
+                        if (!intent.getMetadata().get("citaId").equals(cita.getId().toString())) {
+                            throw new BadRequestException("El pago no corresponde a esta cita");
+                        }
                     }
                 } catch (StripeException e) {
                     throw new BadRequestException("Error al validar el pago con Stripe: " + e.getMessage());
