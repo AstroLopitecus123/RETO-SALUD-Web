@@ -226,7 +226,7 @@ export class AppComponent {
   }
 
   login(datos: { correo: string; contrasena: string }): Observable<LoginResponse> {
-  console.log(' Intentando login con:', datos);
+  // Proceso de autenticacion seguro
 
   return this.http.post<LoginResponse>(`/api/auth/login`, datos).pipe(
     tap(res => {

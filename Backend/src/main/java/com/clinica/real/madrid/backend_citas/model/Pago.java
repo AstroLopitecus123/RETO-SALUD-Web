@@ -34,7 +34,7 @@ public class Pago {
     @Column(name = "fecha_pago")
     private LocalDateTime fechaPago;
 
-    @Column(name = "transaccion_id")
+    @Column(name = "transaccion_id", unique = true)
     private String transaccionId;
 
     @OneToOne(mappedBy = "pago", cascade = CascadeType.ALL)
