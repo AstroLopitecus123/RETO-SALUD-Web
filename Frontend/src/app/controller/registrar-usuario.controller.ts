@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { UsuarioService } from '../services/usuario.service';
 import { PaisService } from '../services/pais.service';
+import { RecaptchaService } from '../services/recaptcha.service';
 import { Usuario } from '../models/usuario.model';
 import { Pais } from '../models/pais.model';
 import { Router } from '@angular/router';
@@ -46,6 +47,7 @@ export class RegistrarUsuarioController {
   mostrarConfirmarContrasena = false;
 
   pasoActual: number = 1;
+  registrando = false;
 
   touched: typeof this.defaultTouched = { ...this.defaultTouched };
 
@@ -63,9 +65,14 @@ export class RegistrarUsuarioController {
 
   constructor(
     private usuarioService: UsuarioService,
-    private paisService: PaisService
+    private paisService: PaisService,
+    private recaptchaService: RecaptchaService
   ) {
     this.cargarPaises();
+  }
+
+  precargarRecaptcha(): void {
+    this.recaptchaService.cargarScript();
   }
 
   get nombreValido(): boolean {
@@ -255,6 +262,7 @@ export class RegistrarUsuarioController {
   }
 
   registrar(): void {
+    if (this.registrando) return;
     if (this.usuario.correoUsuario) {
       this.usuario.correo = this.usuario.correoUsuario + '@gmail.com';
     }
@@ -306,6 +314,7 @@ export class RegistrarUsuarioController {
       }
       this.usuarioService.crearUsuario(payload).subscribe({
         next: () => {
+          this.registrando = false;
           if (this.ns) this.ns.success('¡Cuenta creada con éxito! Bienvenido a R.E.T.O Salud.');
           this.inicializarFormulario();
 
@@ -316,6 +325,7 @@ export class RegistrarUsuarioController {
           }
         },
         error: (err) => {
+          this.registrando = false;
           if (err.status === 409 && err.error?.field) {
             const field = err.error.field;
             const msg = err.error.message;
@@ -334,20 +344,16 @@ export class RegistrarUsuarioController {
       });
     };
 
-    const grecaptcha = (window as any).grecaptcha;
-    if (grecaptcha && grecaptcha.ready) {
-      grecaptcha.ready(() => {
-        grecaptcha.execute('6Ld0RgEuAAAAAIwlBueBWFXShFduB1v-sXijBoSQ', { action: 'registro' })
-          .then((token: string) => {
-            enviarRegistro(token);
-          })
-          .catch(() => {
-            enviarRegistro('TEST_BYPASS_TOKEN');
-          });
+    this.recaptchaService.obtenerToken('registro')
+      .then((token: string) => {
+        enviarRegistro(token);
+      })
+      .catch(() => {
+        this.registrando = false;
+        if (this.ns) {
+          this.ns.error('No se pudo verificar el captcha de seguridad. Por favor, revisa tu conexión e inténtalo nuevamente.');
+        }
       });
-    } else {
-      enviarRegistro('TEST_BYPASS_TOKEN');
-    }
   }
 
   trackByPaisId(index: number, pais: Pais): number {

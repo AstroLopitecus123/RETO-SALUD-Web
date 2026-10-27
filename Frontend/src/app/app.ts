@@ -94,9 +94,7 @@ export class AppComponent implements OnDestroy {
       else if (event instanceof NavigationEnd) {
 
         this.actualizarEstadoPanel(event.urlAfterRedirects);
-        setTimeout(() => {
-          this.loading = false;
-        }, 800);
+        this.loading = false;
       } 
       else if (event instanceof NavigationCancel || event instanceof NavigationError) {
         this.loading = false;

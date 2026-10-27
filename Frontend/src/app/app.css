@@ -564,7 +564,8 @@
   .nav-links {
     position: fixed;
     top: 65px;
-    right: -100%; /* Oculto fuera de pantalla */
+    right: -100%;
+    visibility: hidden;
     width: 250px;
     height: calc(100vh - 65px);
     background: white;
@@ -577,7 +578,8 @@
   }
 
   .nav-links.open {
-    right: 0; /* Aparece en pantalla */
+    right: 0;
+    visibility: visible;
   }
 
   .nav-links a {

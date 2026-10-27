@@ -8,10 +8,11 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="toast-container" *ngIf="toasts.length > 0">
+    <div class="toast-container" *ngIf="toasts.length > 0" role="region" aria-label="Notificaciones del sistema" aria-live="polite">
       <div *ngFor="let toast of toasts" 
            class="toast-item" 
            [ngClass]="toast.type"
+           [attr.role]="toast.type === 'error' ? 'alert' : 'status'"
            (click)="removeToast(toast)">
         <div class="toast-icon">
           <i class="fa-solid" [ngClass]="getIcon(toast.type)"></i>

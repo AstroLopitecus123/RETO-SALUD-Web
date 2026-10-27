@@ -40,32 +40,13 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // 1. Seleccionar un doctor aleatorio de inicio
-    this.indiceActual = Math.floor(Math.random() * this.doctoresLogin.length);
-    this.doctorActual = this.doctoresLogin[this.indiceActual];
-
-    // 2. Pre-cargar los demás doctores en segundo plano sin competir con LCP inicial
-    this.precargarDoctores();
-
-    // 3. Iniciar rotación periódica respetando preferencias de accesibilidad
+    this.indiceActual = 0;
+    this.doctorActual = this.doctoresLogin[0];
     this.iniciarRotacion();
   }
 
   ngOnDestroy(): void {
     this.detenerRotacion();
-  }
-
-  private precargarDoctores(): void {
-    if (typeof window !== 'undefined') {
-      setTimeout(() => {
-        this.doctoresLogin.forEach(src => {
-          if (src !== this.doctorActual) {
-            const img = new Image();
-            img.src = src;
-          }
-        });
-      }, 1500);
-    }
   }
 
   private iniciarRotacion(): void {
@@ -96,6 +77,10 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.desvanecerDoctor = false;
       }, 50);
     }, 600); // 600ms coincidiendo con la transición CSS
+  }
+
+  get esPantallaGrande(): boolean {
+    return typeof window !== 'undefined' ? window.innerWidth > 768 : true;
   }
 
   loginConGoogle(): void {

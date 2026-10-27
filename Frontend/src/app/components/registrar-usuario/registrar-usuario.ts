@@ -32,7 +32,9 @@ export class RegistrarUsuarioComponent implements OnInit {
     this.ctrl.setUtils(this.router, this.ns, this.app);
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.ctrl.precargarRecaptcha();
+  }
 
   registrarConGoogle(): void {
     const nonce = crypto.randomUUID();

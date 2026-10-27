@@ -5,7 +5,7 @@ import { NarratorDirective } from '../../directives/narrator.directive';
 import { UsuarioService } from '../../services/usuario.service';
 import { MedicoService } from '../../services/medico.service';
 
-declare var L: any;
+import * as L from 'leaflet';
 
 @Component({
   selector: 'app-home',

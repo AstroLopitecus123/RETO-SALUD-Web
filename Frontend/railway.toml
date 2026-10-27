@@ -1,6 +1,6 @@
 buildCommand = "npm install && npm run build"
 
 [deploy]
-startCommand = "npx -y serve -s browser -l $PORT"
+startCommand = "node server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 100

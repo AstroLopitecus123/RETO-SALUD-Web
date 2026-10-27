@@ -53,7 +53,7 @@
   <div id="accessibility-panel" class="acc-menu" [class.open]="abierto" [attr.inert]="!abierto ? '' : null" [attr.aria-hidden]="!abierto">
 
     <div class="acc-menu-header">
-      <button class="btn-back" *ngIf="vistaActual !== 'PRINCIPAL'" (click)="cambiarVista('PRINCIPAL'); $event.stopPropagation()">
+      <button class="btn-back" *ngIf="vistaActual !== 'PRINCIPAL'" (click)="cambiarVista('PRINCIPAL'); $event.stopPropagation()" aria-label="Volver al menú principal">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
       <i class="fa-solid" [ngClass]="{
@@ -130,14 +130,14 @@
 
     <div class="view-submenu-zoom" *ngIf="vistaActual === 'ZOOM'">
       <div class="zoom-controls">
-        <button class="btn-zoom" (click)="ajustarZoom(-0.1)" [disabled]="nivelZoom <= 0.8">
+        <button class="btn-zoom" (click)="ajustarZoom(-0.1)" [disabled]="nivelZoom <= 0.8" aria-label="Reducir zoom">
           <i class="fa-solid fa-minus"></i>
         </button>
         <div class="zoom-indicator">
           <span>{{ (nivelZoom * 100).toFixed(0) }}%</span>
           <small>Tamaño Interfaz</small>
         </div>
-        <button class="btn-zoom" (click)="ajustarZoom(0.1)" [disabled]="nivelZoom >= 1.5">
+        <button class="btn-zoom" (click)="ajustarZoom(0.1)" [disabled]="nivelZoom >= 1.5" aria-label="Aumentar zoom">
           <i class="fa-solid fa-plus"></i>
         </button>
       </div>
@@ -150,7 +150,7 @@
           <strong>Modo Alto Contraste</strong>
           <span>Mejora la legibilidad de textos y bordes.</span>
         </div>
-        <button class="acc-switch" [class.on]="contrasteActivo" (click)="toggleContraste()">
+        <button class="acc-switch" role="switch" [attr.aria-checked]="contrasteActivo" aria-label="Modo alto contraste" (click)="toggleContraste()">
           <span class="switch-ball"></span>
         </button>
       </div>
@@ -190,7 +190,7 @@
           <strong>Comandos de Voz (Deepgram)</strong>
           <span>Habla para navegar o dictar datos.</span>
         </div>
-        <button class="acc-switch" [class.on]="vozActiva" (click)="toggleVoz()">
+        <button class="acc-switch" role="switch" [attr.aria-checked]="vozActiva" aria-label="Comandos de voz" (click)="toggleVoz()">
           <span class="switch-ball"></span>
         </button>
       </div>
@@ -200,7 +200,7 @@
           <strong>Narrador de Imágenes</strong>
           <span>Oye descripciones de fotos y elementos.</span>
         </div>
-        <button class="acc-switch" [class.on]="narradorActivo" (click)="toggleNarrador()">
+        <button class="acc-switch" role="switch" [attr.aria-checked]="narradorActivo" aria-label="Narrador de imágenes" (click)="toggleNarrador()">
           <span class="switch-ball"></span>
         </button>
       </div>
@@ -210,7 +210,7 @@
           <strong>Narrador de Página</strong>
           <span>Lee lo que señalas con mouse o teclado.</span>
         </div>
-        <button class="acc-switch" [class.on]="narradorPaginaActivo" (click)="toggleNarradorPagina()">
+        <button class="acc-switch" role="switch" [attr.aria-checked]="narradorPaginaActivo" aria-label="Narrador de página" (click)="toggleNarradorPagina()">
           <span class="switch-ball"></span>
         </button>
       </div>
@@ -220,7 +220,7 @@
           <strong>Sonidos del Sistema</strong>
           <span>Alertas acústicas de éxito o error.</span>
         </div>
-        <button class="acc-switch" [class.on]="sonidoNotificaciones" (click)="toggleSonidoNotificaciones()">
+        <button class="acc-switch" role="switch" [attr.aria-checked]="sonidoNotificaciones" aria-label="Sonidos del sistema" (click)="toggleSonidoNotificaciones()">
           <span class="switch-ball"></span>
         </button>
       </div>
@@ -238,7 +238,7 @@
           <strong>Modo Teclado Pro</strong>
           <span>Resaltado de foco ultra-visible.</span>
         </div>
-        <button class="acc-switch" [class.on]="modoTeclado" (click)="toggleTeclado()">
+        <button class="acc-switch" role="switch" [attr.aria-checked]="modoTeclado" aria-label="Modo teclado pro" (click)="toggleTeclado()">
           <span class="switch-ball"></span>
         </button>
       </div>

@@ -1,7 +1,7 @@
 <div class="login-layout">
 
-  <div class="doctor-container">
-    <img [src]="doctorActual" alt="Médico especialista de R.E.T.O Salud" class="doctor-img" [class.desvanecer]="desvanecerDoctor">
+  <div class="doctor-container" *ngIf="esPantallaGrande">
+    <img [src]="doctorActual" alt="Médico especialista de R.E.T.O Salud" class="doctor-img" [class.desvanecer]="desvanecerDoctor" width="450" height="630" loading="eager" fetchpriority="low">
   </div>
 
   <div class="login-hero anim-fade-in">
