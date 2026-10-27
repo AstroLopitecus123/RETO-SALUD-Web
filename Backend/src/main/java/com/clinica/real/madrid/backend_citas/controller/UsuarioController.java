@@ -92,6 +92,7 @@ public class UsuarioController {
 
         EstadoUsuario nuevoEstado = EstadoUsuario.valueOf(estadoStr.toUpperCase());
         Usuario usuarioActualizado = usuarioService.actualizarEstado(id, nuevoEstado);
+        usuarioActualizado.setContrasena(null);
 
         return ResponseEntity.ok(usuarioActualizado);
     }
@@ -101,6 +102,7 @@ public class UsuarioController {
     public ResponseEntity<Usuario> actualizarRol(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String nuevoRol = body.get("rol");
         Usuario usuarioActualizado = usuarioService.actualizarRol(id, nuevoRol);
+        usuarioActualizado.setContrasena(null);
         return ResponseEntity.ok(usuarioActualizado);
     }
 
@@ -115,6 +117,7 @@ public class UsuarioController {
         boolean isOwner = auth != null && auth.getName().equals(oldUser.getCorreo());
         
         Usuario actualizado = usuarioService.actualizarUsuario(id, usuario);
+        actualizado.setContrasena(null);
         
         Map<String, Object> response = new HashMap<>();
         response.put("usuario", actualizado);
@@ -134,6 +137,7 @@ public class UsuarioController {
             @RequestBody Map<String, String> body) {
         String config = body.get("configuracionVisual");
         Usuario usuario = usuarioService.actualizarConfiguracionVisual(id, config);
+        usuario.setContrasena(null);
         return ResponseEntity.ok(usuario);
     }
 

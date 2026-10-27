@@ -42,7 +42,9 @@ export class MisPagosComponent implements OnInit, OnDestroy {
       this.cargarPagos(true);
 
       this.pollingSub = interval(5000).subscribe(() => {
-        this.cargarPagos(false);
+        if (!document.hidden) {
+          this.cargarPagos(false);
+        }
       });
     } else {
       this.error = 'No se encontró la sesión activa.';

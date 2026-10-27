@@ -48,7 +48,12 @@ export class PagarTarjetaComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (this.citaId) {
       this.citaService.obtenerPorId(this.citaId).subscribe({
-        next: (data: any) => { this.cita = data; },
+        next: (data: any) => {
+          this.cita = data;
+          if (data?.medico?.especialidad?.precioBase) {
+            this.monto = data.medico.especialidad.precioBase;
+          }
+        },
         error: (err: any) => console.error('Error cargando cita:', err)
       });
     } else {
@@ -167,8 +172,8 @@ export class PagarTarjetaComponent implements OnInit, AfterViewInit, OnDestroy {
           error: (err: any) => {
             this.cargando = false;
 
-            this.pagoExitoso = true;
-            this.ns.success('Pago confirmado. Contacta soporte si hay dudas.');
+            this.pagoExitoso = false;
+            this.ns.error('El cobro se procesó en Stripe pero hubo un problema al confirmar en el sistema. Contacta a soporte con el ID: ' + (resultado.paymentIntentId || ''));
             console.error('Error al notificar backend post-pago:', err);
           }
         });

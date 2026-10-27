@@ -64,6 +64,12 @@ public class UsuarioService {
     @Autowired
     private NotificacionRepository notificacionRepository;
 
+    @Autowired
+    private com.clinica.real.madrid.backend_citas.repository.CitaRepository citaRepository;
+
+    @Autowired
+    private com.clinica.real.madrid.backend_citas.repository.DisponibilidadRepository disponibilidadRepository;
+
     @Value("${google.client.id}")
     private String googleClientId;
 
@@ -173,6 +179,15 @@ public class UsuarioService {
             throw new ResourceNotFoundException("Usuario con ID " + id + " no existe");
         }
 
+        dispositivoActivoRepository.deleteByUsuarioId(id);
+        medicoRepository.findByUsuarioId(id).ifPresent(medico -> {
+            if (citaRepository.existsByMedicoId(medico.getId())) {
+                throw new BadRequestException("No se puede eliminar el usuario porque tiene citas registradas como medico");
+            }
+            disponibilidadRepository.deleteByMedicoId(medico.getId());
+            medicoRepository.delete(medico);
+        });
+
         notificacionRepository.deleteByUsuarioDestinoId(id);
         
         List<Pago> pagos = pagoRepository.findByUsuarioId(id);
@@ -266,7 +281,7 @@ public class UsuarioService {
         if (rolEnum == Rol.MEDICO && rolAnterior != Rol.MEDICO) {
             boolean existeMedico = medicoRepository.existsByUsuarioId(id);
             if (!existeMedico) {
-                Especialidad defaultEsp = especialidadRepository.findById(1L).orElse(null);
+                Especialidad defaultEsp = especialidadRepository.findById(1L).orElseGet(() -> especialidadRepository.findAll().stream().findFirst().orElse(null));
                 Medico medico = new Medico();
                 medico.setUsuario(usuario);
                 medico.setEspecialidad(defaultEsp);
@@ -275,7 +290,13 @@ public class UsuarioService {
         }
 
         if (rolAnterior == Rol.MEDICO && rolEnum != Rol.MEDICO) {
-            medicoRepository.findByUsuarioId(id).ifPresent(medicoRepository::delete);
+            medicoRepository.findByUsuarioId(id).ifPresent(medico -> {
+                if (citaRepository.existsByMedicoId(medico.getId())) {
+                    throw new BadRequestException("No se puede cambiar el rol de un medico con citas asociadas");
+                }
+                disponibilidadRepository.deleteByMedicoId(medico.getId());
+                medicoRepository.delete(medico);
+            });
         }
 
         return usuario;

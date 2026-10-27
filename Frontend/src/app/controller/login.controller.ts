@@ -49,7 +49,7 @@ export class LoginController {
       return;
     }
 
-    this.usuarioService.login({ correo: this.correo, contrasena: this.contrasena }).subscribe({
+    this.usuarioService.login({ correo: correo, contrasena: this.contrasena }).subscribe({
       next: (res) => {
         if ('id' in res) {
           const usuario = new UsuarioFull(res);

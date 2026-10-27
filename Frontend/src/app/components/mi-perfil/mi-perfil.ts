@@ -62,6 +62,8 @@ export class MiPerfilComponent implements OnInit {
           this.cargando = false;
         }
       });
+    } else {
+      this.cargando = false;
     }
   }
 
@@ -109,16 +111,12 @@ export class MiPerfilComponent implements OnInit {
     }
 
     // Correo
-    const correoLocal = correo.split('@')[0];
     if (
-      correo.length < 11 ||
-      correo.length > 50 ||
-      !correo.toLowerCase().endsWith('@gmail.com') ||
-      !/^[a-zA-Z0-9._-]+$/.test(correoLocal)
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(correo) ||
+      correo.length < 5 ||
+      correo.length > 80
     ) {
-      this.ns.error(
-        'El correo debe terminar en @gmail.com, tener entre 11 y 50 caracteres, y no contener caracteres especiales.'
-      );
+      this.ns.error('El formato del correo electrónico no es válido.');
       return;
     }
 
@@ -202,7 +200,12 @@ export class MiPerfilComponent implements OnInit {
     this.usuarioService.actualizarUsuario(this.usuarioEditado).subscribe({
       next: updated => {
         this.usuario = new UsuarioFull(updated);
-        localStorage.setItem('usuario', JSON.stringify(this.usuario));
+        const localUser = localStorage.getItem('usuario');
+        const prevObj = localUser ? JSON.parse(localUser) : {};
+        const merged = { ...prevObj, ...this.usuario };
+        if (prevObj.medicoId) merged.medicoId = prevObj.medicoId;
+        if (prevObj.recibirNotificacionesPush !== undefined) merged.recibirNotificacionesPush = prevObj.recibirNotificacionesPush;
+        localStorage.setItem('usuario', JSON.stringify(merged));
         this.editando = false;
         this.ns.success('Perfil actualizado correctamente');
       },
@@ -236,47 +239,28 @@ export class MiPerfilComponent implements OnInit {
     return;
   }
 
-  // Contraseña actual sin caracteres especiales
-  if (!/^[a-zA-Z0-9]+$/.test(actual)) {
-    this.ns.error('La contraseña actual no debe contener caracteres especiales.');
-    return;
-  }
-
-  // Coincidencia de contraseñas
   if (nueva !== confirmar) {
     this.ns.error('Las nuevas contraseñas no coinciden.');
     return;
   }
 
-  // Longitud entre 8 y 15
-  if (nueva.length < 8 || nueva.length > 15) {
-    this.ns.error(
-      'La nueva contraseña debe tener entre 8 y 15 caracteres.'
-    );
+  if (nueva.length < 8 || nueva.length > 72) {
+    this.ns.error('La nueva contraseña debe tener entre 8 y 72 caracteres.');
     return;
   }
 
-  // Al menos una mayúscula
   if (!/[A-Z]/.test(nueva)) {
-    this.ns.error(
-      'La nueva contraseña debe contener al menos una letra mayúscula.'
-    );
+    this.ns.error('La nueva contraseña debe contener al menos una letra mayúscula.');
     return;
   }
 
-  // Al menos un número
+  if (!/[a-z]/.test(nueva)) {
+    this.ns.error('La nueva contraseña debe contener al menos una letra minúscula.');
+    return;
+  }
+
   if (!/\d/.test(nueva)) {
-    this.ns.error(
-      'La nueva contraseña debe contener al menos un número.'
-    );
-    return;
-  }
-
-  // Sin caracteres especiales
-  if (!/^[a-zA-Z0-9]+$/.test(nueva)) {
-    this.ns.error(
-      'La nueva contraseña no debe contener caracteres especiales.'
-    );
+    this.ns.error('La nueva contraseña debe contener al menos un número.');
     return;
   }
 

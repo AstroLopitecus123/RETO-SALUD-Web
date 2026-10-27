@@ -82,8 +82,11 @@ export class GestionarDisponibilidadComponent implements OnInit {
 
   private fechaToISO(fecha: string): string {
     const [dia, mes, anio] = fecha.split('/').map(p => parseInt(p, 10));
-    const f = new Date(2000 + anio, mes - 1, dia);
-    return f.toISOString().split('T')[0];
+    const fullAnio = anio < 100 ? 2000 + anio : anio;
+    const mesStr = mes.toString().padStart(2, '0');
+    const diaStr = dia.toString().padStart(2, '0');
+    return `${fullAnio}-${mesStr}-${diaStr}`;
+
   }
 
   get nombreMedico(): string {
@@ -106,6 +109,8 @@ export class GestionarDisponibilidadComponent implements OnInit {
       d.fecha === this.fechaToISO(fecha) &&
       parseInt(d.horaInicio.split(':')[0]) === hora
     );
+
+
 
     if (!dispo) {
       dispo = new Disponibilidad({

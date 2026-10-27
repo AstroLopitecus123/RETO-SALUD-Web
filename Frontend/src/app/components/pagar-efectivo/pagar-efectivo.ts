@@ -54,7 +54,7 @@ export class PagarEfectivoComponent implements OnInit {
     const body = {
       citaId: this.citaId,
       usuarioId: usuario.id,
-      monto: 20.00
+      monto: (this.cita as any)?.medico?.especialidad?.precioBase ?? 20.00
     };
 
     setTimeout(() => {

@@ -24,7 +24,7 @@ export class UsuarioFull {
 
       const usuario = data.usuario ?? data;
 
-      this.medicoId = data.medicoId ?? data.id ?? 0;   
+      this.medicoId = data.medicoId ?? (data.usuario ? data.id : 0);   
       this.id = usuario.id ?? 0;      
 
       this.nombre = usuario.nombre ?? '';

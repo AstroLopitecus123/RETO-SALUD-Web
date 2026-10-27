@@ -1,7 +1,11 @@
 package com.clinica.real.madrid.backend_citas.service;
 
 import com.clinica.real.madrid.backend_citas.exception.HorarioNoDisponibleException;
+import com.clinica.real.madrid.backend_citas.exception.BadRequestException;
 import com.clinica.real.madrid.backend_citas.exception.ResourceNotFoundException;
+import com.clinica.real.madrid.backend_citas.model.Pago;
+import com.clinica.real.madrid.backend_citas.repository.ComprobanteRepository;
+import com.clinica.real.madrid.backend_citas.repository.PagoRepository;
 import com.clinica.real.madrid.backend_citas.model.Cita;
 import com.clinica.real.madrid.backend_citas.model.Disponibilidad;
 import com.clinica.real.madrid.backend_citas.model.EstadoCita;
@@ -37,6 +41,12 @@ public class CitaService {
     private HistorialRepository historialRepository;
 
     @Autowired
+    private PagoRepository pagoRepository;
+
+    @Autowired
+    private ComprobanteRepository comprobanteRepository;
+
+    @Autowired
     private NotificacionService notificacionService;
 
     @Autowired
@@ -60,11 +70,27 @@ public class CitaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
     }
 
+    @Transactional
     public void eliminar(Long id) {
         if (!citaRepository.existsById(id)) {
             throw new ResourceNotFoundException("Cita no encontrada");
         }
-        citaRepository.deleteById(id);
+        Cita cita = citaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
+        disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
+            cita.getMedico().getId(), 
+            cita.getFecha().toLocalDate(), 
+            cita.getFecha().toLocalTime()
+        ).ifPresent(disp -> {
+            disp.setEstado(Disponibilidad.EstadoDisponibilidad.DISPONIBLE);
+            disponibilidadRepository.save(disp);
+        });
+        historialRepository.deleteByCitaId(id);
+        List<Pago> pagos = pagoRepository.findByCitaId(id);
+        for (Pago p : pagos) {
+            comprobanteRepository.deleteByPagoId(p.getId());
+            pagoRepository.delete(p);
+        }
+        citaRepository.delete(cita);
     }
 
     public List<Cita> obtenerCitasPorPaciente(Long pacienteId) {
@@ -93,6 +119,11 @@ public class CitaService {
             disponibilidadRepository.save(disp);
         });
 
+        List<Pago> pagos = pagoRepository.findByCitaId(id);
+        for (Pago p : pagos) {
+            comprobanteRepository.deleteByPagoId(p.getId());
+            pagoRepository.delete(p);
+        }
         citaRepository.delete(cita);
     }
 
@@ -236,7 +267,7 @@ public class CitaService {
 
         cita.setFecha(nuevaFecha);
         cita.setFechaPropuesta(null);
-        cita.setEstado(EstadoCita.REPROGRAMACION_ACEPTADA);
+        cita.setEstado(EstadoCita.CONFIRMADA);
         citaRepository.save(cita);
 
         notificarCambioCita(cita, "reprogramación aprobada");
@@ -249,7 +280,7 @@ public class CitaService {
 
         cita.setFechaPropuesta(null);
 
-        cita.setEstado(EstadoCita.REPROGRAMACION_RECHAZADA);
+        cita.setEstado(EstadoCita.CONFIRMADA);
         citaRepository.save(cita);
 
         notificarCambioCita(cita, "solicitud de reprogramación rechazada");
@@ -260,6 +291,9 @@ public class CitaService {
         Cita cita = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
 
+        if (cita.getEstado() == EstadoCita.CANCELADA) {
+            throw new BadRequestException("La cita ya se encuentra cancelada");
+        }
         cancelarCitaInterno(id, false);
 
         try {
@@ -284,6 +318,39 @@ public class CitaService {
 
     @Transactional
     public void reprogramarCita(Long id, LocalDateTime nuevaFecha) {
+        if (nuevaFecha == null) {
+            throw new BadRequestException("La nueva fecha es requerida");
+        }
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+
+        disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
+            cita.getMedico().getId(), 
+            cita.getFecha().toLocalDate(), 
+            cita.getFecha().toLocalTime()
+        ).ifPresent(disp -> {
+            disp.setEstado(Disponibilidad.EstadoDisponibilidad.DISPONIBLE);
+            disponibilidadRepository.save(disp);
+        });
+
+        disponibilidadRepository.findSlotForUpdate(
+            cita.getMedico().getId(), 
+            Disponibilidad.EstadoDisponibilidad.DISPONIBLE,
+            nuevaFecha.toLocalDate(), 
+            nuevaFecha.toLocalTime()
+        ).ifPresentOrElse(disp -> {
+            disp.setEstado(Disponibilidad.EstadoDisponibilidad.NO_DISPONIBLE);
+            disponibilidadRepository.save(disp);
+        }, () -> {
+            throw new HorarioNoDisponibleException("El nuevo horario ya no está disponible o no existe en la agenda del médico");
+        });
+
+        cita.setFecha(nuevaFecha);
+        cita.setFechaPropuesta(null);
+        cita.setEstado(EstadoCita.CONFIRMADA);
+        citaRepository.save(cita);
+
+        notificarCambioCita(cita, "reprogramada correctamente");
 
     }
 
@@ -299,7 +366,7 @@ public class CitaService {
     public void enviarRecordatorios() {
         LocalDateTime ahora = LocalDateTime.now(java.time.ZoneId.systemDefault());
         LocalDateTime desde = ahora.plusHours(23);
-        LocalDateTime hasta = ahora.plusHours(25);
+        LocalDateTime hasta = ahora.plusHours(24);
 
         List<Cita> citas = citaRepository.findByFechaBetweenAndEstado(desde, hasta, EstadoCita.CONFIRMADA);
 

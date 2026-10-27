@@ -63,7 +63,7 @@ public class PagoService {
 
                 .addPaymentMethodType("card")
                 .putMetadata("citaId", request.getCitaId().toString())
-                .putMetadata("usuarioId", request.getUsuarioId().toString())
+                .putMetadata("usuarioId", request.getUsuarioId() != null ? request.getUsuarioId().toString() : (citaParaIntent.getPaciente() != null ? citaParaIntent.getPaciente().getId().toString() : ""))
                 .build();
 
         PaymentIntent intent = PaymentIntent.create(params);
@@ -85,6 +85,16 @@ public class PagoService {
         if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
             throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
         }
+        if (cita.getEstado() == EstadoCita.CANCELADA) {
+            throw new BadRequestException("No se puede registrar pago para una cita cancelada");
+        }
+        List<Pago> pagosExistentes = pagoRepository.findByCitaId(cita.getId());
+        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)) {
+            throw new BadRequestException("La cita ya cuenta con un pago completado");
+        }
+        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.PENDIENTE && p.getMetodo() == MetodoPago.EFECTIVO)) {
+            throw new BadRequestException("La cita ya tiene una promesa de pago en efectivo registrada");
+        }
 
         Pago pago = new Pago();
         pago.setCita(cita);
@@ -101,6 +111,8 @@ public class PagoService {
         pago.setFechaPago(null);
 
         Pago savedPago = pagoRepository.save(pago);
+        cita.setEstado(EstadoCita.CONFIRMADA);
+        citaRepository.save(cita);
 
         return mapToResponse(savedPago);
     }
@@ -139,6 +151,16 @@ public class PagoService {
         if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
             throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
         }
+        if (cita.getEstado() == EstadoCita.CANCELADA) {
+            throw new BadRequestException("No se puede registrar pago para una cita cancelada");
+        }
+        List<Pago> pagosExistentes = pagoRepository.findByCitaId(cita.getId());
+        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)) {
+            throw new BadRequestException("La cita ya cuenta con un pago completado");
+        }
+        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.PENDIENTE && p.getMetodo() == MetodoPago.EFECTIVO)) {
+            throw new BadRequestException("La cita ya tiene una promesa de pago en efectivo registrada");
+        }
 
         Pago pago = new Pago();
         pago.setCita(cita);
@@ -161,7 +183,6 @@ public class PagoService {
 
         pago.setComprobante(comprobante);
         Pago savedPago = pagoRepository.save(pago);
-
         cita.setEstado(EstadoCita.CONFIRMADA);
         citaRepository.save(cita);
 
@@ -177,8 +198,21 @@ public class PagoService {
         if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
             throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
         }
+        if (cita.getEstado() == EstadoCita.CANCELADA) {
+            throw new BadRequestException("No se puede registrar pago para una cita cancelada");
+        }
+        List<Pago> pagosExistentes = pagoRepository.findByCitaId(cita.getId());
+        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)) {
+            throw new BadRequestException("La cita ya cuenta con un pago completado");
+        }
+        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.PENDIENTE && p.getMetodo() == MetodoPago.EFECTIVO)) {
+            throw new BadRequestException("La cita ya tiene una promesa de pago en efectivo registrada");
+        }
 
-        Pago pago = new Pago();
+        Pago pago = pagoRepository.findByCitaId(cita.getId()).stream()
+                .filter(pg -> request.getReferencia() != null && request.getReferencia().trim().equals(pg.getTransaccionId()))
+                .findFirst()
+                .orElse(new Pago());
         pago.setCita(cita);
         pago.setUsuario(usuario);
         Double precioBaseTarjeta = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
@@ -194,8 +228,12 @@ public class PagoService {
         pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
 
                 if (Boolean.TRUE.equals(request.getExito())) {
-            if (request.getReferencia() != null && !request.getReferencia().trim().isEmpty() && pagoRepository.existsByTransaccionId(request.getReferencia().trim())) {
-                throw new BadRequestException("Esta transaccion de pago ya fue procesada anteriormente");
+            if (request.getReferencia() != null && !request.getReferencia().trim().isEmpty()) {
+                boolean yaCompletadoTransaccion = pagoRepository.findByCitaId(cita.getId()).stream()
+                        .anyMatch(pg -> request.getReferencia().trim().equals(pg.getTransaccionId()) && pg.getEstadoPago() == EstadoPago.COMPLETADO);
+                if (yaCompletadoTransaccion) {
+                    throw new BadRequestException("Esta transaccion de pago ya fue procesada anteriormente");
+                }
             }
             // Validacion obligatoria con Stripe
             if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_") && !stripeSecretKey.contains("dummy")) {
@@ -272,6 +310,14 @@ public class PagoService {
     public PagoResponse anularPago(Long pagoId) {
         Pago pago = pagoRepository.findById(pagoId)
                 .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
+        if (pago.getMetodo() == MetodoPago.TARJETA && pago.getTransaccionId() != null && pago.getEstadoPago() == EstadoPago.COMPLETADO) {
+            try {
+                RefundCreateParams params = RefundCreateParams.builder().setPaymentIntent(pago.getTransaccionId()).build();
+                Refund.create(params);
+            } catch (StripeException e) {
+                System.err.println("Error Stripe al anular pago #" + pago.getId() + ": " + e.getMessage());
+            }
+        }
         pago.setEstadoPago(EstadoPago.ANULADO);
         Pago savedPago = pagoRepository.save(pago);
         return mapToResponse(savedPago);
@@ -302,7 +348,15 @@ public class PagoService {
                 }
             } else {
 
-                pago.setEstadoPago(EstadoPago.ANULADO);
+                if (pago.getMetodo() == MetodoPago.TARJETA && pago.getTransaccionId() != null && pago.getEstadoPago() == EstadoPago.COMPLETADO) {
+            try {
+                RefundCreateParams params = RefundCreateParams.builder().setPaymentIntent(pago.getTransaccionId()).build();
+                Refund.create(params);
+            } catch (StripeException e) {
+                System.err.println("Error Stripe al anular pago #" + pago.getId() + ": " + e.getMessage());
+            }
+        }
+        pago.setEstadoPago(EstadoPago.ANULADO);
             }
             pagoRepository.save(pago);
         }

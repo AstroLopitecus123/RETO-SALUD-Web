@@ -107,7 +107,15 @@ export class NotificacionesComponent implements OnInit {
     const noLeidas = this.notificaciones.filter(n => !n.leida);
     if (noLeidas.length === 0) return;
 
-    noLeidas.forEach(n => this.marcarLeida(n));
+    noLeidas.forEach(n => {
+      this.notificacionService.marcarComoLeida(n.id).subscribe({
+        next: () => {
+          n.leida = true;
+          this.notificacionService.notificarCambio();
+        },
+        error: () => {}
+      });
+    });
     if (this.ns) this.ns.success('Todas las notificaciones marcadas como leídas');
   }
 
