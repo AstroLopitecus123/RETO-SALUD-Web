@@ -10,7 +10,7 @@
                 <p>Mantente al dÃ­a con las actualizaciones de tus citas y servicios.</p>
             </div>
             <div class="header-actions">
-                <button class="btn-premium-notif" (click)="marcarTodasComoLeidas()" *ngIf="notificaciones.length > 0">
+                <button class="btn-premium-notif" (click)="marcarTodasComoLeidas()" *ngIf="notificaciones.length > 0" [disabled]="loading || !!error || marcandoTodas || getCountNoLeidas() === 0">
                     <i class="fa-solid fa-check-double"></i> Marcar todas como leÃ­das
                 </button>
             </div>
@@ -28,12 +28,19 @@
 
         <div [class.premium-card]="!modoDashboard" [style.padding]="modoDashboard ? '0' : '0'" style="overflow: hidden; border: none; box-shadow: none; background: transparent;">
             <div class="notif-list-container">
-                <div *ngIf="notificacionesFiltradas.length === 0" class="empty-state">
+                <p *ngIf="loading" role="status">Cargando notificaciones...</p>
+                <div *ngIf="!loading && error" role="alert">
+                    <p>{{ error }}</p><button (click)="cargarNotificaciones()">Reintentar</button>
+                </div>
+                <p *ngIf="errorAccion" role="alert">{{ errorAccion }}</p>
+                <p *ngIf="marcandoTodas" role="status">Marcando notificaciones...</p>
+                <div *ngIf="!loading && !error && notificacionesFiltradas.length === 0" class="empty-state">
                     <i class="fa-solid fa-bell-slash"></i>
-                    <p>No tienes notificaciones</p>
+                    <p>{{ filtro === 'NO_LEIDAS' ? 'No tienes notificaciones sin leer' : 'No tienes notificaciones' }}</p>
                     <span>Cuando haya novedades sobre tus citas, aparecerán aquí.</span>
                 </div>
 
+                <ng-container *ngIf="!loading && !error">
                 <div class="notif-card-item" *ngFor="let notif of notificacionesFiltradas" 
                      [class.unread]="!notif.leida" 
                      (click)="marcarLeida(notif)">
@@ -49,6 +56,7 @@
                     </div>
                     <div class="notif-indicator" *ngIf="!notif.leida"></div>
                 </div>
+                </ng-container>
             </div>
         </div>
 </div>

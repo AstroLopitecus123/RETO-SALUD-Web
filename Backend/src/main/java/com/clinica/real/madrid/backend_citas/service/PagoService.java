@@ -1,23 +1,22 @@
 package com.clinica.real.madrid.backend_citas.service;
 
-import java.math.BigDecimal;
-
-import com.clinica.real.madrid.backend_citas.exception.BadRequestException;
 import com.clinica.real.madrid.backend_citas.dto.*;
+import com.clinica.real.madrid.backend_citas.exception.BadRequestException;
 import com.clinica.real.madrid.backend_citas.model.*;
 import com.clinica.real.madrid.backend_citas.repository.CitaRepository;
 import com.clinica.real.madrid.backend_citas.repository.PagoRepository;
-import com.clinica.real.madrid.backend_citas.repository.UsuarioRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
+import com.stripe.net.RequestOptions;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -26,340 +25,276 @@ import java.util.stream.Collectors;
 
 @Service
 public class PagoService {
-
     @Autowired
     private PagoRepository pagoRepository;
-
     @Autowired
     private CitaRepository citaRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
-    @Value("${stripe.secret-key}")
-    private String stripeSecretKey;
+    // Every payment mutation takes the appointment lock before reading its payments.
+    private Cita bloquearCita(Long id) {
+        Cita cita = citaRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new BadRequestException("Cita no encontrada"));
+        entityManager.refresh(cita, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return cita;
+    }
 
-    @Transactional
-    public PaymentIntentResponse crearPaymentIntent(PaymentIntentRequest request) throws StripeException {
-        System.out.println("\uD83D\uDCB3 Creando PaymentIntent para Cita ID: " + request.getCitaId() + " - Monto: S/. " + request.getMonto());
-
-        Cita citaParaIntent = citaRepository.findById(request.getCitaId())
-                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
-        if (request.getUsuarioId() != null && citaParaIntent.getPaciente() != null 
-                && !citaParaIntent.getPaciente().getId().equals(request.getUsuarioId())) {
-            throw new BadRequestException("No puedes realizar pagos para una cita que pertenece a otro paciente");
+    private void validarCita(Cita cita, Long usuarioId) {
+        if (cita.getPaciente() == null || usuarioId == null || !usuarioId.equals(cita.getPaciente().getId())) {
+            throw new BadRequestException("El pago no corresponde al paciente de la cita");
         }
-        Double precioReal = (citaParaIntent.getMedico() != null && citaParaIntent.getMedico().getEspecialidad() != null)
-                ? citaParaIntent.getMedico().getEspecialidad().getPrecioBase()
-                : null;
-        if (precioReal == null || precioReal <= 0) {
+        if (cita.getEstado() == null || cita.getEstado() == EstadoCita.CANCELADA) {
+            throw new BadRequestException("El estado de la cita no permite registrar pagos");
+        }
+    }
+
+    private BigDecimal precio(Cita cita) {
+        Double valor = cita.getMedico() != null && cita.getMedico().getEspecialidad() != null
+                ? cita.getMedico().getEspecialidad().getPrecioBase() : null;
+        if (valor == null || !Double.isFinite(valor) || valor <= 0) {
             throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
         }
-        long montoCentavos = (long) (precioReal * 100);
+        return BigDecimal.valueOf(valor).setScale(2, RoundingMode.HALF_UP);
+    }
 
+    private Pago nuevoPago(Cita cita, MetodoPago metodo) {
+        Pago pago = new Pago();
+        pago.setCita(cita);
+        pago.setUsuario(cita.getPaciente());
+        pago.setMonto(precio(cita));
+        pago.setMetodo(metodo);
+        pago.setEstadoPago(EstadoPago.PENDIENTE);
+        return pago;
+    }
+
+    private Pago pagoActivo(List<Pago> pagos) {
+        List<Pago> activos = pagos.stream().filter(p -> p.getEstadoPago() == EstadoPago.PENDIENTE
+                || p.getEstadoPago() == EstadoPago.COMPLETADO).collect(Collectors.toList());
+        if (activos.size() > 1) throw new BadRequestException("La cita tiene pagos duplicados; requiere revision");
+        return activos.isEmpty() ? null : activos.get(0);
+    }
+
+    private Pago pagoParaEfectivo(Cita cita) {
+        Pago pago = pagoActivo(pagoRepository.findByCitaIdForUpdate(cita.getId()));
+        if (pago == null || pago.getMetodo() == MetodoPago.EFECTIVO) return pago;
+        if (pago.getEstadoPago() != EstadoPago.PENDIENTE || pago.getTransaccionId() == null) {
+            throw new BadRequestException("La cita ya tiene un pago con otro metodo");
+        }
+        try {
+            PaymentIntent intent = PaymentIntent.retrieve(pago.getTransaccionId());
+            if ("succeeded".equals(intent.getStatus()) || "processing".equals(intent.getStatus())
+                    || "requires_capture".equals(intent.getStatus())) {
+                throw new BadRequestException("El pago tarjeta ya fue cobrado o esta en proceso; no se puede cambiar a efectivo");
+            }
+            if (!"canceled".equals(intent.getStatus())) intent.cancel();
+        } catch (StripeException e) {
+            throw new BadRequestException("No se pudo cancelar el intento tarjeta; reintenta antes de cambiar a efectivo");
+        }
+        pago.setEstadoPago(EstadoPago.ANULADO);
+        pagoRepository.save(pago);
+        return null;
+    }
+
+    @Transactional(rollbackFor = StripeException.class)
+    public PaymentIntentResponse crearPaymentIntent(PaymentIntentRequest request) throws StripeException {
+        Cita cita = bloquearCita(request.getCitaId());
+        // Staff may omit the patient ID, but may not substitute a different patient.
+        Long usuarioId = request.getUsuarioId() != null ? request.getUsuarioId()
+                : cita.getPaciente() != null ? cita.getPaciente().getId() : null;
+        validarCita(cita, usuarioId);
+        List<Pago> pagos = pagoRepository.findByCitaIdForUpdate(cita.getId());
+        Pago pago = pagoActivo(pagos);
+        PaymentIntent intent;
+        if (pago != null) {
+            if (pago.getMetodo() != MetodoPago.TARJETA || pago.getEstadoPago() != EstadoPago.PENDIENTE
+                    || pago.getTransaccionId() == null) {
+                throw new BadRequestException("La cita ya tiene un pago registrado");
+            }
+            intent = PaymentIntent.retrieve(pago.getTransaccionId());
+            if (!"canceled".equals(intent.getStatus())) {
+                return new PaymentIntentResponse(intent.getClientSecret(), intent.getId(), intent.getStatus());
+            }
+            // A previous request can cancel Stripe and then roll back the local state.
+            pago.setEstadoPago(EstadoPago.ANULADO);
+            pagoRepository.save(pago);
+        }
+        pago = pagoRepository.saveAndFlush(nuevoPago(cita, MetodoPago.TARJETA));
         PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                .setAmount(montoCentavos)
-                .setCurrency("pen")
-
-                .addPaymentMethodType("card")
-                .putMetadata("citaId", request.getCitaId().toString())
-                .putMetadata("usuarioId", request.getUsuarioId() != null ? request.getUsuarioId().toString() : (citaParaIntent.getPaciente() != null ? citaParaIntent.getPaciente().getId().toString() : ""))
-                .build();
-
-        PaymentIntent intent = PaymentIntent.create(params);
-        System.out.println("\u2705 PaymentIntent creado correctamente: " + intent.getId() + " - Status: " + intent.getStatus());
-
-        return new PaymentIntentResponse(
-                intent.getClientSecret(),
-                intent.getId(),
-                intent.getStatus()
-        );
+                .setAmount(pago.getMonto().movePointRight(2).longValueExact()).setCurrency("pen")
+                .addPaymentMethodType("card").putMetadata("citaId", cita.getId().toString())
+                .putMetadata("usuarioId", usuarioId.toString()).build();
+        // Use committed history, not the generated ID: a Stripe timeout can roll back that ID.
+        intent = PaymentIntent.create(params, RequestOptions.builder()
+                .setIdempotencyKey("cita-intent-" + cita.getId() + "-" + pagos.size()).build());
+        pago.setTransaccionId(intent.getId());
+        pagoRepository.save(pago);
+        return new PaymentIntentResponse(intent.getClientSecret(), intent.getId(), intent.getStatus());
     }
 
     @Transactional
     public PagoResponse prometerPagoEfectivo(PagoEfectivoRequest request) {
-        Cita cita = citaRepository.findById(request.getCitaId())
-                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
-        Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
-            throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
+        Cita cita = bloquearCita(request.getCitaId());
+        validarCita(cita, request.getUsuarioId());
+        Pago pago = pagoParaEfectivo(cita);
+        if (pago != null) {
+            if (pago.getMetodo() == MetodoPago.EFECTIVO && pago.getEstadoPago() == EstadoPago.PENDIENTE) {
+                return mapToResponse(pago);
+            }
+            throw new BadRequestException("La cita ya tiene un pago registrado");
         }
-        if (cita.getEstado() == EstadoCita.CANCELADA) {
-            throw new BadRequestException("No se puede registrar pago para una cita cancelada");
-        }
-        List<Pago> pagosExistentes = pagoRepository.findByCitaId(cita.getId());
-        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)) {
-            throw new BadRequestException("La cita ya cuenta con un pago completado");
-        }
-        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.PENDIENTE && p.getMetodo() == MetodoPago.EFECTIVO)) {
-            throw new BadRequestException("La cita ya tiene una promesa de pago en efectivo registrada");
-        }
-
-        Pago pago = new Pago();
-        pago.setCita(cita);
-        pago.setUsuario(usuario);
-        Double precioBaseEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
-                ? cita.getMedico().getEspecialidad().getPrecioBase()
-                : null;
-        if (precioBaseEfectivo == null || precioBaseEfectivo <= 0) {
-            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
-        }
-        pago.setMonto(BigDecimal.valueOf(precioBaseEfectivo));
-        pago.setMetodo(MetodoPago.EFECTIVO);
-        pago.setEstadoPago(EstadoPago.PENDIENTE); 
-        pago.setFechaPago(null);
-
-        Pago savedPago = pagoRepository.save(pago);
+        pago = pagoRepository.save(nuevoPago(cita, MetodoPago.EFECTIVO));
         cita.setEstado(EstadoCita.CONFIRMADA);
         citaRepository.save(cita);
-
-        return mapToResponse(savedPago);
-    }
-
-    @Transactional
-    public PagoResponse completarPago(Long pagoId) {
-        Pago pago = pagoRepository.findById(pagoId)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
-
-        pago.setEstadoPago(EstadoPago.COMPLETADO);
-        pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
-
-        if (pago.getComprobante() == null) {
-            Comprobante comprobante = new Comprobante();
-            comprobante.setNumero("FACT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            comprobante.setFecha(LocalDateTime.now(java.time.ZoneId.systemDefault()));
-            comprobante.setPago(pago);
-            pago.setComprobante(comprobante);
-        }
-
-        if (pago.getCita() != null) {
-            pago.getCita().setEstado(EstadoCita.CONFIRMADA);
-            citaRepository.save(pago.getCita());
-        }
-
-        Pago savedPago = pagoRepository.save(pago);
-        return mapToResponse(savedPago);
+        return mapToResponse(pago);
     }
 
     @Transactional
     public PagoResponse pagarEfectivo(PagoEfectivoRequest request) {
-        Cita cita = citaRepository.findById(request.getCitaId())
-                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
-        Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
-            throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
-        }
-        if (cita.getEstado() == EstadoCita.CANCELADA) {
-            throw new BadRequestException("No se puede registrar pago para una cita cancelada");
-        }
-        List<Pago> pagosExistentes = pagoRepository.findByCitaId(cita.getId());
-        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)) {
-            throw new BadRequestException("La cita ya cuenta con un pago completado");
-        }
-        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.PENDIENTE && p.getMetodo() == MetodoPago.EFECTIVO)) {
-            throw new BadRequestException("La cita ya tiene una promesa de pago en efectivo registrada");
-        }
+        Cita cita = bloquearCita(request.getCitaId());
+        validarCita(cita, request.getUsuarioId());
+        Pago pago = pagoParaEfectivo(cita);
+        if (pago != null && pago.getEstadoPago() == EstadoPago.COMPLETADO) return mapToResponse(pago);
+        if (pago == null) pago = nuevoPago(cita, MetodoPago.EFECTIVO);
+        completar(pago, cita);
+        return mapToResponse(pagoRepository.save(pago));
+    }
 
-        Pago pago = new Pago();
-        pago.setCita(cita);
-        pago.setUsuario(usuario);
-        Double precioBaseEfectivo = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
-                ? cita.getMedico().getEspecialidad().getPrecioBase()
-                : null;
-        if (precioBaseEfectivo == null || precioBaseEfectivo <= 0) {
-            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
+    @Transactional
+    public PagoResponse completarPago(Long pagoId) {
+        Long citaId = pagoRepository.findCitaIdByPagoId(pagoId)
+                .orElseThrow(() -> new BadRequestException("Pago no encontrado"));
+        Cita cita = bloquearCita(citaId);
+        Pago pago = pagoRepository.findById(pagoId).orElseThrow(() -> new BadRequestException("Pago no encontrado"));
+        entityManager.refresh(pago, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        validarCita(cita, pago.getUsuario() != null ? pago.getUsuario().getId() : null);
+        if (pago.getMetodo() != MetodoPago.EFECTIVO || pago.getEstadoPago() != EstadoPago.PENDIENTE) {
+            throw new BadRequestException("Solo se puede completar un pago efectivo pendiente");
         }
-        pago.setMonto(BigDecimal.valueOf(precioBaseEfectivo));
-        pago.setMetodo(MetodoPago.EFECTIVO);
+        Pago activo = pagoActivo(pagoRepository.findByCitaIdForUpdate(citaId));
+        if (activo == null || !pagoId.equals(activo.getId())) {
+            throw new BadRequestException("El pago no es el pago activo de la cita");
+        }
+        completar(pago, cita);
+        return mapToResponse(pagoRepository.save(pago));
+    }
+
+    private void completar(Pago pago, Cita cita) {
         pago.setEstadoPago(EstadoPago.COMPLETADO);
-        pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
-
-        Comprobante comprobante = new Comprobante();
-        comprobante.setNumero("FACT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        comprobante.setFecha(LocalDateTime.now(java.time.ZoneId.systemDefault()));
-        comprobante.setPago(pago);
-
-        pago.setComprobante(comprobante);
-        Pago savedPago = pagoRepository.save(pago);
-        cita.setEstado(EstadoCita.CONFIRMADA);
-        citaRepository.save(cita);
-
-        return mapToResponse(savedPago);
+        pago.setFechaPago(LocalDateTime.now());
+        if (pago.getComprobante() == null) {
+            Comprobante comprobante = new Comprobante();
+            comprobante.setNumero("FACT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            comprobante.setFecha(LocalDateTime.now());
+            comprobante.setPago(pago);
+            pago.setComprobante(comprobante);
+        }
+        if (cita.getEstado() == EstadoCita.PENDIENTE) {
+            cita.setEstado(EstadoCita.CONFIRMADA);
+            citaRepository.save(cita);
+        }
     }
 
     @Transactional
     public PagoResponse pagarTarjeta(PagoTarjetaRequest request) {
-        Cita cita = citaRepository.findById(request.getCitaId())
-                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
-        Usuario usuario = usuarioRepository.findById(request.getUsuarioId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        if (cita.getPaciente() != null && !cita.getPaciente().getId().equals(usuario.getId())) {
-            throw new BadRequestException("No puedes pagar una cita que pertenece a otro paciente");
+        Cita cita = bloquearCita(request.getCitaId());
+        validarCita(cita, request.getUsuarioId());
+        String referencia = request.getReferencia() == null ? "" : request.getReferencia().trim();
+        List<Pago> pagos = pagoRepository.findByCitaIdForUpdate(cita.getId());
+        Pago pago = pagoActivo(pagos);
+        if (referencia.isEmpty() || pago != null && (pago.getMetodo() != MetodoPago.TARJETA
+                || !referencia.equals(pago.getTransaccionId()))) {
+            throw new BadRequestException("Debes utilizar el intento de pago registrado para esta cita");
         }
-        if (cita.getEstado() == EstadoCita.CANCELADA) {
-            throw new BadRequestException("No se puede registrar pago para una cita cancelada");
-        }
-        List<Pago> pagosExistentes = pagoRepository.findByCitaId(cita.getId());
-        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.COMPLETADO)) {
-            throw new BadRequestException("La cita ya cuenta con un pago completado");
-        }
-        if (pagosExistentes.stream().anyMatch(p -> p.getEstadoPago() == EstadoPago.PENDIENTE && p.getMetodo() == MetodoPago.EFECTIVO)) {
-            throw new BadRequestException("La cita ya tiene una promesa de pago en efectivo registrada");
-        }
-
-        Pago pago = pagoRepository.findByCitaId(cita.getId()).stream()
-                .filter(pg -> request.getReferencia() != null && request.getReferencia().trim().equals(pg.getTransaccionId()))
-                .findFirst()
-                .orElse(new Pago());
-        pago.setCita(cita);
-        pago.setUsuario(usuario);
-        Double precioBaseTarjeta = (cita.getMedico() != null && cita.getMedico().getEspecialidad() != null)
-                ? cita.getMedico().getEspecialidad().getPrecioBase()
-                : null;
-        if (precioBaseTarjeta == null || precioBaseTarjeta <= 0) {
-            throw new BadRequestException("La especialidad medica no tiene un precio asignado valido");
-        }
-        BigDecimal precioTarjeta = BigDecimal.valueOf(precioBaseTarjeta);
-        pago.setMonto(precioTarjeta);
-        pago.setMetodo(MetodoPago.TARJETA);
-        pago.setTransaccionId(request.getReferencia());
-        pago.setFechaPago(LocalDateTime.now(java.time.ZoneId.systemDefault()));
-
-                if (Boolean.TRUE.equals(request.getExito())) {
-            if (request.getReferencia() != null && !request.getReferencia().trim().isEmpty()) {
-                boolean yaCompletadoTransaccion = pagoRepository.findByCitaId(cita.getId()).stream()
-                        .anyMatch(pg -> request.getReferencia().trim().equals(pg.getTransaccionId()) && pg.getEstadoPago() == EstadoPago.COMPLETADO);
-                if (yaCompletadoTransaccion) {
-                    throw new BadRequestException("Esta transaccion de pago ya fue procesada anteriormente");
-                }
+        // Intents issued before pending payments were persisted must still be confirmable.
+        if (pago == null) {
+            if (!Boolean.TRUE.equals(request.getExito()) || pagoRepository.existsByTransaccionId(referencia)) {
+                throw new BadRequestException("No hay un intento tarjeta valido para confirmar");
             }
-            // Validacion obligatoria con Stripe
-            if (stripeSecretKey != null && stripeSecretKey.startsWith("sk_") && !stripeSecretKey.contains("dummy")) {
-                if (request.getReferencia() == null || request.getReferencia().trim().isEmpty()) {
-                    throw new BadRequestException("Referencia de transaccion de Stripe requerida");
-                }
-                try {
-                    PaymentIntent intent = PaymentIntent.retrieve(request.getReferencia());
-                    if (!"succeeded".equalsIgnoreCase(intent.getStatus())) {
-                        throw new BadRequestException("El pago no ha sido completado en Stripe. Estado: " + intent.getStatus());
-                    }
-                    if (intent.getCurrency() == null || !"pen".equalsIgnoreCase(intent.getCurrency())) {
-                        throw new BadRequestException("La moneda del pago en Stripe debe ser PEN (Soles)");
-                    }
-                    long montoEsperadoCentavos = (long) (precioTarjeta.doubleValue() * 100);
-                    if (intent.getAmount() == null || intent.getAmount() < montoEsperadoCentavos) {
-                        throw new BadRequestException("El monto pagado en Stripe no coincide con el precio de la cita");
-                    }
-                    if (intent.getMetadata() != null && intent.getMetadata().containsKey("citaId")) {
-                        if (!intent.getMetadata().get("citaId").equals(cita.getId().toString())) {
-                            throw new BadRequestException("El pago no corresponde a esta cita");
-                        }
-                    }
-                } catch (StripeException e) {
-                    throw new BadRequestException("Error al validar el pago con Stripe: " + e.getMessage());
-                }
-            } else {
-                throw new BadRequestException("La pasarela de pago Stripe no esta configurada correctamente en el servidor.");
-            }
-
-            pago.setEstadoPago(EstadoPago.COMPLETADO);
-
-            Comprobante comprobante = new Comprobante();
-            comprobante.setNumero("FACT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-            comprobante.setFecha(LocalDateTime.now(java.time.ZoneId.systemDefault()));
-            comprobante.setPago(pago);
-            pago.setComprobante(comprobante);
-
-            cita.setEstado(EstadoCita.CONFIRMADA);
-            citaRepository.save(cita);
-        } else {
-            pago.setEstadoPago(EstadoPago.PENDIENTE);
+            pago = nuevoPago(cita, MetodoPago.TARJETA);
+            pago.setTransaccionId(referencia);
         }
-
-        Pago savedPago = pagoRepository.save(pago);
-        return mapToResponse(savedPago);
+        if (pago.getEstadoPago() == EstadoPago.COMPLETADO) return mapToResponse(pago);
+        if (!Boolean.TRUE.equals(request.getExito())) return mapToResponse(pago);
+        try {
+            PaymentIntent intent = PaymentIntent.retrieve(referencia);
+            if (!"succeeded".equals(intent.getStatus()) || !"pen".equalsIgnoreCase(intent.getCurrency())
+                    || intent.getAmount() == null || intent.getAmount() != pago.getMonto().movePointRight(2).longValueExact()
+                    || intent.getMetadata() == null || !cita.getId().toString().equals(intent.getMetadata().get("citaId"))
+                    || !request.getUsuarioId().toString().equals(intent.getMetadata().get("usuarioId"))) {
+                throw new BadRequestException("Stripe no confirma un pago valido para esta cita y paciente");
+            }
+        } catch (StripeException e) {
+            throw new BadRequestException("No se pudo validar el pago con Stripe");
+        }
+        completar(pago, cita);
+        return mapToResponse(pagoRepository.save(pago));
     }
 
     public List<PagoResponse> obtenerPagosPorCita(Long citaId) {
-        return pagoRepository.findByCitaId(citaId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return pagoRepository.findByCitaId(citaId).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public List<PagoResponse> obtenerTodosLosPagos() {
-        return pagoRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return pagoRepository.findAll().stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public List<PagoResponse> obtenerPagosPorUsuario(Long usuarioId) {
-        return pagoRepository.findByUsuarioId(usuarioId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return pagoRepository.findByUsuarioId(usuarioId).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     public List<PagoResponse> obtenerPagosPorMedico(Long medicoId) {
-        return pagoRepository.findByCita_Medico_Id(medicoId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return pagoRepository.findByCita_Medico_Id(medicoId).stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
     @Transactional
     public PagoResponse anularPago(Long pagoId) {
-        Pago pago = pagoRepository.findById(pagoId)
-                .orElseThrow(() -> new RuntimeException("Pago no encontrado"));
-        if (pago.getMetodo() == MetodoPago.TARJETA && pago.getTransaccionId() != null && pago.getEstadoPago() == EstadoPago.COMPLETADO) {
-            try {
-                RefundCreateParams params = RefundCreateParams.builder().setPaymentIntent(pago.getTransaccionId()).build();
-                Refund.create(params);
-            } catch (StripeException e) {
-                System.err.println("Error Stripe al anular pago #" + pago.getId() + ": " + e.getMessage());
-            }
-        }
-        pago.setEstadoPago(EstadoPago.ANULADO);
-        Pago savedPago = pagoRepository.save(pago);
-        return mapToResponse(savedPago);
+        Long citaId = pagoRepository.findCitaIdByPagoId(pagoId)
+                .orElseThrow(() -> new BadRequestException("Pago no encontrado"));
+        bloquearCita(citaId);
+        Pago pago = pagoRepository.findById(pagoId).orElseThrow(() -> new BadRequestException("Pago no encontrado"));
+        entityManager.refresh(pago, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        revertir(pago);
+        return mapToResponse(pagoRepository.save(pago));
     }
 
     @Transactional
     public void reembolsarPago(Long citaId) {
-        List<Pago> pagos = pagoRepository.findByCitaId(citaId);
-        if (pagos.isEmpty()) {
-            System.out.println("âš ï¸ No se encontraron pagos para reembolsar en la cita #" + citaId);
-            return;
+        bloquearCita(citaId);
+        for (Pago pago : pagoRepository.findByCitaIdForUpdate(citaId)) {
+            revertir(pago);
+            pagoRepository.save(pago);
         }
+    }
 
-        for (Pago pago : pagos) {
-            if (pago.getEstadoPago() == EstadoPago.REEMBOLSADO || pago.getEstadoPago() == EstadoPago.ANULADO) continue;
-
-            if (pago.getMetodo() == MetodoPago.TARJETA && pago.getTransaccionId() != null) {
-                try {
-                    RefundCreateParams params = RefundCreateParams.builder()
-                            .setPaymentIntent(pago.getTransaccionId())
-                            .build();
-                    Refund refund = Refund.create(params);
-                    System.out.println(" Reembolso exitoso en Stripe. ID: " + refund.getId());
-                    pago.setEstadoPago(EstadoPago.REEMBOLSADO);
-                } catch (StripeException e) {
-                    System.err.println("âŒ Error de Stripe al reembolsar pago #" + pago.getId() + ": " + e.getMessage());
-
-                }
-            } else {
-
-                if (pago.getMetodo() == MetodoPago.TARJETA && pago.getTransaccionId() != null && pago.getEstadoPago() == EstadoPago.COMPLETADO) {
+    private void revertir(Pago pago) {
+        if (pago.getEstadoPago() == EstadoPago.ANULADO || pago.getEstadoPago() == EstadoPago.REEMBOLSADO) return;
+        if (pago.getMetodo() == MetodoPago.TARJETA) {
+            if (pago.getTransaccionId() == null) throw new BadRequestException("Pago tarjeta sin referencia; requiere revision");
             try {
-                RefundCreateParams params = RefundCreateParams.builder().setPaymentIntent(pago.getTransaccionId()).build();
-                Refund.create(params);
+                PaymentIntent intent = PaymentIntent.retrieve(pago.getTransaccionId());
+                if ("succeeded".equals(intent.getStatus())) {
+                    Refund refund = Refund.create(RefundCreateParams.builder().setPaymentIntent(pago.getTransaccionId()).build(),
+                            RequestOptions.builder().setIdempotencyKey("pago-refund-" + pago.getId()).build());
+                    // Stripe replays the original idempotent response, even if its pending refund has since settled.
+                    if (!"succeeded".equals(refund.getStatus()) && refund.getId() != null) {
+                        refund = Refund.retrieve(refund.getId());
+                    }
+                    if (!"succeeded".equals(refund.getStatus())) {
+                        throw new BadRequestException("El reembolso aun no esta confirmado; requiere revision");
+                    }
+                    pago.setEstadoPago(EstadoPago.REEMBOLSADO);
+                    return;
+                }
+                if (!"canceled".equals(intent.getStatus())) {
+                    intent.cancel();
+                }
             } catch (StripeException e) {
-                System.err.println("Error Stripe al anular pago #" + pago.getId() + ": " + e.getMessage());
+                throw new BadRequestException("No se pudo revertir el pago con Stripe");
             }
         }
         pago.setEstadoPago(EstadoPago.ANULADO);
-            }
-            pagoRepository.save(pago);
-        }
     }
 
     private PagoResponse mapToResponse(Pago pago) {
@@ -371,36 +306,23 @@ public class PagoService {
         response.setMetodo(pago.getMetodo().name());
         response.setEstadoPago(pago.getEstadoPago().name());
         response.setTransaccionId(pago.getTransaccionId());
-
-        if (pago.getUsuario() != null) {
-            response.setPacienteNombre(pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido());
+        response.setPacienteNombre(pago.getUsuario().getNombre() + " " + pago.getUsuario().getApellido());
+        if (pago.getCita().getMedico() != null) {
+            var medico = pago.getCita().getMedico();
+            if (medico.getUsuario() != null) response.setMedicoNombre(medico.getUsuario().getNombre() + " " + medico.getUsuario().getApellido());
+            if (medico.getEspecialidad() != null) response.setEspecialidad(medico.getEspecialidad().getNombre());
         }
-        if (pago.getCita() != null && pago.getCita().getMedico() != null) {
-            response.setMedicoNombre(pago.getCita().getMedico().getUsuario().getNombre() + " " + pago.getCita().getMedico().getUsuario().getApellido());
-            if (pago.getCita().getMedico().getEspecialidad() != null) {
-                response.setEspecialidad(pago.getCita().getMedico().getEspecialidad().getNombre());
-            }
-            if (pago.getCita().getFecha() != null) {
-                response.setCitaFechaResumen(pago.getCita().getFecha().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
-            }
-        }
-
-        if (pago.getFechaPago() != null) {
-            response.setFechaPago(pago.getFechaPago().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        }
-
+        if (pago.getCita().getFecha() != null) response.setCitaFechaResumen(pago.getCita().getFecha().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+        if (pago.getFechaPago() != null) response.setFechaPago(pago.getFechaPago().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         if (pago.getComprobante() != null) {
-            ComprobanteResponse cRes = new ComprobanteResponse();
-            cRes.setId(pago.getComprobante().getId());
-            cRes.setPagoId(pago.getId());
-            cRes.setNumero(pago.getComprobante().getNumero());
-            if (pago.getComprobante().getFecha() != null) {
-                cRes.setFecha(pago.getComprobante().getFecha().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            }
-            cRes.setArchivoUrl(pago.getComprobante().getArchivoUrl());
-            response.setComprobante(cRes);
+            ComprobanteResponse comprobante = new ComprobanteResponse();
+            comprobante.setId(pago.getComprobante().getId());
+            comprobante.setPagoId(pago.getId());
+            comprobante.setNumero(pago.getComprobante().getNumero());
+            if (pago.getComprobante().getFecha() != null) comprobante.setFecha(pago.getComprobante().getFecha().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            comprobante.setArchivoUrl(pago.getComprobante().getArchivoUrl());
+            response.setComprobante(comprobante);
         }
-
         return response;
     }
 }

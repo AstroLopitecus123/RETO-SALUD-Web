@@ -57,7 +57,12 @@ public class NotificacionController {
         String correo = auth.getName();
         Usuario r = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        Notificacion notificacion = notificacionService.marcarComoLeida(id, r.getId());
+        Notificacion notificacion;
+        try {
+            notificacion = notificacionService.marcarComoLeida(id, r.getId(), r.getRol().name(), r.getFechaRegistro());
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        }
         if (notificacion == null) {
             return ResponseEntity.notFound().build();
         }

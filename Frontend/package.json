@@ -10,6 +10,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:regression": "karma start tests/auth/karma.conf.cjs",
+    "test:ui:local": "node tests/ui/local-visual.cjs",
     "test:a11y": "cypress open",
     "test:a11y:headless": "cypress run"
   },

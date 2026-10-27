@@ -10,6 +10,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HistorialService } from '../services/historial.service';
 import { Historial } from '../models/historial.model';
 import { NotificationService } from '../services/notification.service';
+import { defer, finalize } from 'rxjs';
 
 export class MisCitasController {
 
@@ -33,6 +34,7 @@ export class MisCitasController {
   editando = false;
   error = '';
   cargando = false;
+  private cargandoCitas = false;
   public fechaActual: Date = new Date();
 
   citas: Cita[] = [];
@@ -151,6 +153,7 @@ export class MisCitasController {
 
   cargarUsuario(id: number) {
     this.cargando = true;
+    this.error = '';
     this.usuarioService.obtenerUsuario(id).subscribe({
       next: data => {
         this.usuario = new UsuarioFull(data);
@@ -158,33 +161,17 @@ export class MisCitasController {
         this.usuarioEditado = new UsuarioFull(this.usuario);
 
         this.usuarioService.listarPaises().subscribe({
-          next: paises => {
-            this.listaPaises = paises ?? [];
-
-            if (this.usuario.rol?.toUpperCase() === 'MEDICO') {
-              this.medicoService.obtenerPorUsuarioId(this.usuario.id).subscribe({
-                next: medico => {
-                  this.medico = medico;
-                  this.cargarCitas(); 
-                  this.cargando = false;
-                },
-                error: err => {
-                  console.error('Error al obtener médico por usuario:', err);
-                  this.cargarCitas(); 
-                  this.cargando = false;
-                }
-              });
-            } else {
-              this.cargarCitas(); 
-              this.cargando = false;
-            }
-          },
-          error: err => {
-            console.error('Error al listar países:', err);
-            this.cargarCitas();
-            this.cargando = false;
-          }
+          next: paises => { this.listaPaises = paises ?? []; },
+          error: err => console.error('Error al listar países:', err)
         });
+        if (this.usuario.rol?.toUpperCase() === 'MEDICO') {
+          defer(() => this.medicoService.obtenerPorUsuarioId(this.usuario.id)).subscribe({
+            next: medico => { this.medico = medico; this.cargarCitas(); },
+            error: err => this.manejarErrorCitas(err)
+          });
+        } else {
+          this.cargarCitas();
+        }
       },
       error: err => {
         console.error(err);
@@ -231,37 +218,26 @@ export class MisCitasController {
   }
 
   cargarCitas(showLoading: boolean = true) {
-    if (!this.usuario?.id) return;
+    if (!this.usuario?.id || this.cargandoCitas) return;
 
     if (showLoading) this.cargando = true;
     const rol = this.usuario.rol?.toUpperCase();
     const idRuta = Number(this.route.snapshot.paramMap.get('id'));
 
-    if ((rol === 'ADMIN' || rol === 'RECEPCION') && !idRuta) {
-      this.citaService.listarTodas().subscribe({
-        next: data => this.asignarCitas(data),
-        error: err => this.manejarErrorCitas(err)
-      });
+    if (rol === 'MEDICO' && !this.medico?.id) {
+      this.error = 'No se encontró el médico asociado para cargar su agenda.';
+      this.cargando = false;
+      return;
     }
-
-    else if (rol === 'MEDICO') {
-      if (this.medico && this.medico.id) {
-        this.citaService.listarPorMedico(this.medico.id).subscribe({
-          next: data => this.asignarCitas(data),
-          error: err => this.manejarErrorCitas(err)
-        });
-      } else {
-        console.warn('No se encontró el ID del médico para cargar citas.');
-        this.cargando = false;
-      }
-    }
-
-    else {
-      this.citaService.listarPorUsuario(this.usuario.id).subscribe({
-        next: data => this.asignarCitas(data),
-        error: err => this.manejarErrorCitas(err)
-      });
-    }
+    this.cargandoCitas = true;
+    defer(() => {
+      if ((rol === 'ADMIN' || rol === 'RECEPCION') && !idRuta) return this.citaService.listarTodas();
+      if (rol === 'MEDICO') return this.citaService.listarPorMedico(this.medico.id);
+      return this.citaService.listarPorUsuario(this.usuario.id);
+    }).pipe(finalize(() => { this.cargandoCitas = false; this.cargando = false; })).subscribe({
+      next: data => { this.error = ''; this.asignarCitas(data); },
+      error: err => this.manejarErrorCitas(err)
+    });
   }
 
   private asignarCitas(data: any[]) {

@@ -61,6 +61,36 @@ public class CitaService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private com.clinica.real.madrid.backend_citas.repository.MedicoRepository medicoRepository;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
+    public List<Cita> obtenerCitasPorPacienteYMedico(Long pacienteId, Long usuarioMedicoId) {
+        return citaRepository.findByPacienteIdAndMedico_Usuario_IdOrderByFechaDesc(pacienteId, usuarioMedicoId);
+    }
+
+    public boolean esMedicoPropio(Long medicoId, Long usuarioMedicoId) {
+        return medicoRepository.findByUsuarioId(usuarioMedicoId)
+                .map(m -> medicoId.equals(m.getId())).orElse(false);
+    }
+
+    private Cita bloquearCita(Long id) {
+        Cita cita = citaRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
+        // Controllers may already have loaded this entity into the OSIV persistence context.
+        entityManager.refresh(cita, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        return cita;
+    }
+
+    private void exigirEstado(Cita cita, EstadoCita estado) {
+        if (cita.getEstado() != estado) throw new BadRequestException("Estado de cita no valido para esta operacion");
+    }
+
     public List<Cita> listar() {
         return citaRepository.findAllByOrderByFechaDesc();
     }
@@ -75,7 +105,8 @@ public class CitaService {
         if (!citaRepository.existsById(id)) {
             throw new ResourceNotFoundException("Cita no encontrada");
         }
-        Cita cita = citaRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
+        Cita cita = bloquearCita(id);
+        pagoService.reembolsarPago(id);
         disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
             cita.getMedico().getId(), 
             cita.getFecha().toLocalDate(), 
@@ -103,12 +134,13 @@ public class CitaService {
 
     @Transactional
     public void abandonarCheckout(Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
 
         if (cita.getEstado() != EstadoCita.PENDIENTE) {
-            throw new RuntimeException("Solo se pueden abandonar reservas en estado PENDIENTE");
+            throw new BadRequestException("Solo se pueden abandonar reservas en estado PENDIENTE");
         }
+
+        pagoService.reembolsarPago(id);
 
         disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
             cita.getMedico().getId(), 
@@ -156,6 +188,8 @@ public class CitaService {
         // Proteccion contra Mass Assignment e IDOR: toda nueva cita se crea con ID nuevo y estado PENDIENTE
         cita.setId(null);
         cita.setEstado(EstadoCita.PENDIENTE);
+        cita.setFechaCreacion(LocalDateTime.now());
+        cita.setFechaPropuesta(null);
 
         return citaRepository.save(cita);
     }
@@ -170,12 +204,11 @@ public class CitaService {
 
     @Transactional
     public void confirmarCita(Long id) {
-        int filas = citaRepository.actualizarEstado(id, EstadoCita.CONFIRMADA);
-        if (filas == 0) {
-            throw new RuntimeException("No se encontró la cita con ID " + id);
-        }
-
-        Cita cita = citaRepository.findById(id).orElseThrow();
+        Cita cita = bloquearCita(id);
+        if (cita.getEstado() == EstadoCita.CONFIRMADA) return;
+        exigirEstado(cita, EstadoCita.PENDIENTE);
+        cita.setEstado(EstadoCita.CONFIRMADA);
+        citaRepository.save(cita);
         notificarCambioCita(cita, "confirmada");
     }
 
@@ -185,12 +218,12 @@ public class CitaService {
     }
 
     private void cancelarCitaInterno(Long id, boolean notificar) {
-        int filas = citaRepository.actualizarEstado(id, EstadoCita.CANCELADA);
-        if (filas == 0) {
-            throw new RuntimeException("No se encontró la cita con ID " + id);
-        }
-
-        Cita cita = citaRepository.findById(id).orElseThrow();
+        Cita cita = bloquearCita(id);
+        if (cita.getEstado() == EstadoCita.CANCELADA) return;
+        pagoService.reembolsarPago(id);
+        cita.setEstado(EstadoCita.CANCELADA);
+        cita.setFechaPropuesta(null);
+        citaRepository.save(cita);
 
         disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
             cita.getMedico().getId(), 
@@ -208,8 +241,11 @@ public class CitaService {
 
     @Transactional
     public void solicitarReprogramacion(Long id, LocalDateTime nuevaFecha, String motivo) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
+        exigirEstado(cita, EstadoCita.CONFIRMADA);
+        if (nuevaFecha == null || !nuevaFecha.isAfter(LocalDateTime.now())) {
+            throw new BadRequestException("La nueva fecha debe ser futura");
+        }
         cita.setFechaPropuesta(nuevaFecha);
         cita.setEstado(EstadoCita.SOLICITUD_REPROGRAMACION);
 
@@ -224,8 +260,8 @@ public class CitaService {
 
     @Transactional
     public void solicitarCancelacion(Long id, String motivo) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
+        exigirEstado(cita, EstadoCita.CONFIRMADA);
         cita.setEstado(EstadoCita.SOLICITUD_CANCELACION);
         cita.setMotivo(motivo);
         citaRepository.save(cita);
@@ -235,10 +271,10 @@ public class CitaService {
 
     @Transactional
     public void confirmarReprogramacion(Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
+        exigirEstado(cita, EstadoCita.SOLICITUD_REPROGRAMACION);
 
-        if (cita.getFechaPropuesta() == null) {
+        if (cita.getFechaPropuesta() == null || !cita.getFechaPropuesta().isAfter(LocalDateTime.now())) {
             throw new RuntimeException("No hay una fecha propuesta para esta cita");
         }
 
@@ -275,8 +311,8 @@ public class CitaService {
 
     @Transactional
     public void rechazarReprogramacion(Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
+        exigirEstado(cita, EstadoCita.SOLICITUD_REPROGRAMACION);
 
         cita.setFechaPropuesta(null);
 
@@ -288,27 +324,17 @@ public class CitaService {
 
     @Transactional
     public void confirmarCancelacion(Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
-
-        if (cita.getEstado() == EstadoCita.CANCELADA) {
-            throw new BadRequestException("La cita ya se encuentra cancelada");
-        }
+        Cita cita = bloquearCita(id);
+        if (cita.getEstado() == EstadoCita.CANCELADA) return;
         cancelarCitaInterno(id, false);
-
-        try {
-            pagoService.reembolsarPago(id);
-        } catch (Exception e) {
-            System.err.println("⚠️ Error en reembolso automático para cita " + id + ": " + e.getMessage());
-        }
 
         notificarCambioCita(cita, "cancelación aprobada y reembolso gestionado");
     }
 
     @Transactional
     public void rechazarCancelacion(Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
+        exigirEstado(cita, EstadoCita.SOLICITUD_CANCELACION);
 
         cita.setEstado(EstadoCita.CONFIRMADA);
         citaRepository.save(cita);
@@ -318,11 +344,15 @@ public class CitaService {
 
     @Transactional
     public void reprogramarCita(Long id, LocalDateTime nuevaFecha) {
-        if (nuevaFecha == null) {
+        if (nuevaFecha == null || !nuevaFecha.isAfter(LocalDateTime.now())) {
             throw new BadRequestException("La nueva fecha es requerida");
         }
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la cita con ID " + id));
+        Cita cita = bloquearCita(id);
+        if (cita.getEstado() == EstadoCita.CANCELADA) {
+            throw new BadRequestException("No se puede reprogramar una cita cancelada");
+        }
+        EstadoCita estadoPosterior = cita.getEstado() == EstadoCita.PENDIENTE
+                ? EstadoCita.PENDIENTE : EstadoCita.CONFIRMADA;
 
         disponibilidadRepository.findFirstByMedicoIdAndFechaAndHoraInicio(
             cita.getMedico().getId(), 
@@ -347,7 +377,7 @@ public class CitaService {
 
         cita.setFecha(nuevaFecha);
         cita.setFechaPropuesta(null);
-        cita.setEstado(EstadoCita.CONFIRMADA);
+        cita.setEstado(estadoPosterior);
         citaRepository.save(cita);
 
         notificarCambioCita(cita, "reprogramada correctamente");
@@ -382,15 +412,24 @@ public class CitaService {
         }
     }
 
-        @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = 300000)
     public void liberarCitasPendientesAbandonadas() {
         LocalDateTime limite = LocalDateTime.now(java.time.ZoneId.systemDefault()).minusMinutes(15);
-        List<Cita> abandonadas = citaRepository.findByEstadoAndFechaCreacionBefore(EstadoCita.PENDIENTE, limite);
-        for (Cita cita : abandonadas) {
+        List<Long> abandonadas = citaRepository.findIdsAbandonadas(EstadoCita.PENDIENTE, limite);
+        for (Long id : abandonadas) {
             try {
-                cancelarCitaInterno(cita.getId(), false);
+                // A separate transaction per reservation avoids self-invocation without a transaction.
+                var transaction = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+                transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                transaction.executeWithoutResult(status -> {
+                    Cita actual = bloquearCita(id);
+                    if (actual.getEstado() == EstadoCita.PENDIENTE && actual.getFechaCreacion() != null
+                            && actual.getFechaCreacion().isBefore(limite)) {
+                        cancelarCitaInterno(id, false);
+                    }
+                });
             } catch (Exception e) {
-                System.err.println("Error al liberar cita abandonada ID " + cita.getId() + ": " + e.getMessage());
+                System.err.println("Error al liberar cita abandonada ID " + id + ": " + e.getMessage());
             }
         }
     }
@@ -437,6 +476,20 @@ public class CitaService {
     }
 
     private void notificarCambioCita(Cita cita, String accion) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            enviarCambioCita(cita, accion);
+                        }
+                    });
+        } else {
+            enviarCambioCita(cita, accion);
+        }
+    }
+
+    private void enviarCambioCita(Cita cita, String accion) {
         final String f = cita.getFecha().toLocalDate().toString();
         final String h = cita.getFecha().toLocalTime().toString();
         final String nDr = cita.getMedico().getUsuario().getNombre();

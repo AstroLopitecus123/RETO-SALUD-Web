@@ -26,6 +26,10 @@
         </header>
 
         <section class="main-content">
+            <p *ngIf="ctrl.cargando" role="status">Cargando citas...</p>
+            <div *ngIf="!ctrl.cargando && ctrl.error" role="alert">
+                <p>{{ ctrl.error }}</p><button (click)="ctrl.inicializar()">Reintentar</button>
+            </div>
 
             <div class="premium-card filters-bar-premium">
                 <div class="search-box-modern">
@@ -56,7 +60,7 @@
                 </div>
             </div>
 
-            <div class="premium-card" *ngIf="ctrl.usuario.rol !== 'MEDICO'">
+            <div class="premium-card" *ngIf="!ctrl.cargando && !ctrl.error && ctrl.usuario.rol !== 'MEDICO'">
                 <div class="modern-table-container" *ngIf="ctrl.citasFiltradas.length; else noCitasTable">
                     <table class="modern-table">
                         <thead>
@@ -185,7 +189,7 @@
             </div>
 
             <!-- Nuevo diseño tipo lista para el MEDICO -->
-            <div class="premium-card appointment-preview" *ngIf="ctrl.usuario.rol === 'MEDICO'" style="background: transparent; border: none; box-shadow: none; padding: 0;">
+            <div class="premium-card appointment-preview" *ngIf="!ctrl.cargando && !ctrl.error && ctrl.usuario.rol === 'MEDICO'" style="background: transparent; border: none; box-shadow: none; padding: 0;">
                 <div class="appointment-list" *ngIf="ctrl.citasFiltradas.length; else noCitasList">
                     <div class="apt-item" *ngFor="let cita of ctrl.citasFiltradas">
                         

@@ -131,25 +131,44 @@ export class PagarTarjetaComponent implements OnInit, AfterViewInit, OnDestroy {
       moneda: 'pen'
     }).subscribe({
       next: async (res: any) => {
-        const clientSecret = res.clientSecret;
-        if (!clientSecret) {
-          this.ns.error('Error: No se recibió el token de pago del servidor.');
-          this.cargando = false;
-          return;
+        let paymentIntentId = res.id;
+        if (res.status !== 'succeeded') {
+          const clientSecret = res.clientSecret;
+          if (!clientSecret) {
+            this.ns.error('Error: No se recibió el token de pago del servidor.');
+            this.cargando = false;
+            return;
+          }
+
+          console.log(' PaymentIntent creado. Confirmando con Stripe...');
+
+          let resultado;
+          try {
+            resultado = await this.pagoService.confirmarPagoConTarjeta(
+              clientSecret,
+              this.usuario?.correo || '',
+              this.nombreTitular
+            );
+          } catch (err) {
+            this.cargando = false;
+            this.pagoExitoso = false;
+            this.ns.error('No se pudo confirmar el pago con Stripe. Reintenta para verificar su estado.');
+            console.error('Error al confirmar el pago con Stripe:', err);
+            return;
+          }
+
+          if (!resultado.success) {
+            this.cargando = false;
+            const mensajeReal = this.getMensajeErrorReal(resultado);
+            this.ns.error(mensajeReal);
+            return;
+          }
+          paymentIntentId = resultado.paymentIntentId;
         }
 
-        console.log(' PaymentIntent creado. Confirmando con Stripe...');
-
-        const resultado = await this.pagoService.confirmarPagoConTarjeta(
-          clientSecret,
-          this.usuario?.correo || '',
-          this.nombreTitular
-        );
-
-        if (!resultado.success) {
+        if (!paymentIntentId) {
           this.cargando = false;
-          const mensajeReal = this.getMensajeErrorReal(resultado);
-          this.ns.error(mensajeReal);
+          this.ns.error('Error: No se recibió el ID del pago confirmado.');
           return;
         }
 
@@ -159,7 +178,7 @@ export class PagarTarjetaComponent implements OnInit, AfterViewInit, OnDestroy {
           citaId: this.citaId as number,
           usuarioId: this.usuario?.id,
           monto: this.monto,
-          referencia: resultado.paymentIntentId || 'confirmed',
+          referencia: paymentIntentId,
           exito: true
         };
 
@@ -173,7 +192,7 @@ export class PagarTarjetaComponent implements OnInit, AfterViewInit, OnDestroy {
             this.cargando = false;
 
             this.pagoExitoso = false;
-            this.ns.error('El cobro se procesó en Stripe pero hubo un problema al confirmar en el sistema. Contacta a soporte con el ID: ' + (resultado.paymentIntentId || ''));
+            this.ns.error('El cobro se procesó en Stripe pero hubo un problema al confirmar en el sistema. Contacta a soporte con el ID: ' + paymentIntentId);
             console.error('Error al notificar backend post-pago:', err);
           }
         });

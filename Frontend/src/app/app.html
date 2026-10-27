@@ -15,11 +15,11 @@
       </div>
     </a>
 
-    <button class="menu-toggle" (click)="toggleMenu()" aria-label="Abrir menú principal">
+    <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="isMenuOpen" aria-controls="public-nav" aria-label="Abrir o cerrar menú principal">
       <i class="fa-solid" [ngClass]="isMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
     </button>
 
-    <nav class="nav-links" [ngClass]="{'open': isMenuOpen}" (click)="isMenuOpen = false">
+    <nav id="public-nav" class="nav-links" [ngClass]="{'open': isMenuOpen}" (click)="isMenuOpen = false">
 
       <a *ngIf="isLoggedIn" [routerLink]="getDashboardRoute()" class="header-user-link">
         <span class="header-avatar-wrap">
@@ -43,7 +43,10 @@
   </div>
 </header>
 
-<aside class="dashboard-sidebar" *ngIf="isPanelRoute">
+<button *ngIf="isPanelRoute" class="sidebar-mobile-toggle" (click)="toggleMenu()" [attr.aria-expanded]="isMenuOpen" aria-controls="dashboard-sidebar" aria-label="Abrir navegación del panel"><i class="fa-solid fa-bars" aria-hidden="true"></i> Menú</button>
+<button *ngIf="isPanelRoute && isMenuOpen && isMobileSidebar" class="sidebar-backdrop" (click)="isMenuOpen = false" tabindex="-1" aria-label="Cerrar navegación"></button>
+<aside id="dashboard-sidebar" class="dashboard-sidebar" *ngIf="isPanelRoute" [class.open]="isMenuOpen" [attr.inert]="isMobileSidebar && !isMenuOpen ? '' : null" [attr.data-managed-modal]="isMobileSidebar && isMenuOpen ? '' : null" aria-label="Navegación del panel">
+  <button class="sidebar-mobile-close" data-modal-close data-modal-initial-focus (click)="isMenuOpen = false" aria-label="Cerrar navegación">Cerrar menú</button>
   <div class="sidebar-brand">
     <img src="/assets/images/LogoSOLO.webp" width="80" height="44" alt="Logo" class="sidebar-logo" style="height: 44px; width: auto;" />
     <div class="brand-text">
@@ -52,10 +55,10 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" (click)="cerrarSidebarAlNavegar($event)">
 
     <ng-container *ngIf="usuario?.rol === 'ADMIN'">
-      <a class="nav-item" routerLink="/admin" routerLinkActive="active">
+      <a class="nav-item" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
         <i class="fa-solid fa-house-chimney-medical"></i> <span>Dashboard</span>
       </a>
       <a class="nav-item" routerLink="/especialidades" routerLinkActive="active">
@@ -148,7 +151,7 @@
       <i class="fa-solid fa-user-circle"></i> <span>Mi Perfil</span>
     </a>
 
-    <a class="nav-item" routerLink="/" routerLinkActive="active">
+    <a class="nav-item" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
       <i class="fa-solid fa-home"></i> <span>Ver Web</span>
     </a>
   </nav>
@@ -206,7 +209,7 @@
   </div>
 </div>
 
-<div class="glass-overlay" role="dialog" aria-modal="true" *ngIf="mostrarModalInactividad">
+<div class="glass-overlay" role="alertdialog" aria-modal="true" data-session-warning style="z-index: 2147483647 !important;" *ngIf="mostrarModalInactividad">
   <div class="glass-modal animation-pop-in" (click)="$event.stopPropagation()">
     <div class="modal-header-glass">
       <div class="header-icon-title">
@@ -233,7 +236,7 @@
       <button class="btn-action btn-outline" (click)="cerrarSesionInactividad()">
         Cerrar sesión
       </button>
-      <button class="btn-action btn-add" style="background: #d97706; color: #fff;" (click)="mantenerSesion()">
+      <button class="btn-action btn-add" data-modal-initial-focus style="background: #d97706; color: #fff;" (click)="mantenerSesion()">
         Mantener sesión
       </button>
     </div>

@@ -15,6 +15,9 @@ public class UsuarioPrincipal implements UserDetails {
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
     private final boolean activo;
+    private long tokenVersion;
+
+    public long getTokenVersion() { return tokenVersion; }
 
     public UsuarioPrincipal(Long id, String email, String password, Collection<? extends GrantedAuthority> authorities) {
         this(id, email, password, authorities, true);
@@ -36,13 +39,15 @@ public class UsuarioPrincipal implements UserDetails {
         );
 
         boolean activo = usuario.getEstado() == null || usuario.getEstado() != com.clinica.real.madrid.backend_citas.model.EstadoUsuario.DESACTIVADO;
-        return new UsuarioPrincipal(
+        UsuarioPrincipal principal = new UsuarioPrincipal(
                 usuario.getId(),
                 usuario.getCorreo(),
                 usuario.getContrasena(),
                 authorities,
                 activo
         );
+        principal.tokenVersion = usuario.getTokenVersion();
+        return principal;
     }
 
     public Long getId() {

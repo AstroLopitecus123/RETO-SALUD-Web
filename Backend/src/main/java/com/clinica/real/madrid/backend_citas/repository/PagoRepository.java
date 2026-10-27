@@ -13,9 +13,16 @@ import java.util.List;
 @Repository
 public interface PagoRepository extends JpaRepository<Pago, Long> {
     List<Pago> findByCitaId(Long citaId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Pago p WHERE p.cita.id = :citaId")
+    List<Pago> findByCitaIdForUpdate(@Param("citaId") Long citaId);
     List<Pago> findByUsuarioId(Long usuarioId);
     List<Pago> findByCita_Medico_Id(Long medicoId);
     boolean existsByTransaccionId(String transaccionId);
+
+    @Query("SELECT p.cita.id FROM Pago p WHERE p.id = :id")
+    java.util.Optional<Long> findCitaIdByPagoId(@Param("id") Long id);
     
     @Modifying
     @Transactional

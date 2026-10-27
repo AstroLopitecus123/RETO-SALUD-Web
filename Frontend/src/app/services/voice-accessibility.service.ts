@@ -1,112 +1,136 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { environment } from '../../environments/environment';
 import { Subject } from 'rxjs';
+
+interface BrowserRecognition {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onresult: ((event: {
+    resultIndex: number;
+    results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>;
+  }) => void) | null;
+  start(): void;
+  abort(): void;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class VoiceAccessibilityService implements OnDestroy {
 
-  private deepgramApiKey: string = '';
-  private deepgramSocket: any = null;
-  private mediaRecorder: MediaRecorder | null = null;
+  private recognition: BrowserRecognition | null = null;
+  private restartTimer: ReturnType<typeof setTimeout> | null = null;
   public isListening: boolean = false;
+  public statusMessage = 'Control por voz desactivado.';
+  public errorMessage = '';
 
   commandDetected = new Subject<string>();
 
-  private apiUrl = environment.apiUrl;
-
-  constructor(private http: HttpClient, private router: Router) { }
+  constructor(_http: HttpClient, private router: Router) { }
 
   startListening() {
     if (this.isListening) return;
 
-    this.http.get<any>(`${this.apiUrl}/api/teleconsulta/config`).subscribe({
-      next: (config) => {
-        this.deepgramApiKey = config.deepgramApiKey ? config.deepgramApiKey.trim() : '';
-        if (this.deepgramApiKey && this.deepgramApiKey.length > 0) {
-          this.connectDeepgram();
-        } else {
-          console.error("⚠️ No se recibió una API Key válida de Deepgram.");
-          this.isListening = false;
+    this.errorMessage = '';
+    const browser = typeof window === 'undefined' ? undefined : window as Window & {
+      SpeechRecognition?: new () => BrowserRecognition;
+      webkitSpeechRecognition?: new () => BrowserRecognition;
+    };
+    const Recognition = browser?.SpeechRecognition || browser?.webkitSpeechRecognition;
+    if (!Recognition) {
+      this.fail('Este navegador no admite reconocimiento de voz. Usa un navegador compatible con Web Speech API.');
+      return;
+    }
+
+    try {
+      const recognition = new Recognition();
+      this.recognition = recognition;
+      recognition.lang = 'es-ES';
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      this.isListening = true;
+      this.statusMessage = 'Solicitando acceso al microfono...';
+      let restarts = 0;
+      recognition.onstart = () => {
+        if (this.recognition !== recognition) return;
+        this.statusMessage = 'Control por voz activo.';
+        document.body.classList.add('voice-active');
+        this.commandDetected.next(this.statusMessage);
+      };
+      recognition.onresult = event => {
+        if (this.recognition !== recognition || !this.isListening) return;
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal && result[0].transcript.trim()) {
+            restarts = 0;
+            this.handleTranscripcion(result[0].transcript);
+          }
         }
-      },
-      error: (err) => {
-        console.error("Error al obtener credenciales de voz", err);
-        this.isListening = false;
-      }
-    });
+      };
+      recognition.onerror = event => {
+        if (this.recognition !== recognition || event.error === 'no-speech') return;
+        const errors: Record<string, string> = {
+          'not-allowed': 'Permiso de microfono denegado. Habilitalo en el navegador y activa la voz nuevamente.',
+          'service-not-allowed': 'El navegador no permite el servicio de reconocimiento de voz.',
+          'audio-capture': 'No se encontro un microfono disponible.',
+          'network': 'El reconocimiento de voz no pudo conectarse. Revisa tu conexion.',
+          'language-not-supported': 'El navegador no admite reconocimiento de voz en espanol.'
+        };
+        this.fail(errors[event.error] || 'El reconocimiento de voz se interrumpio. Activalo nuevamente para reintentar.');
+      };
+      recognition.onend = () => {
+        if (this.recognition !== recognition || !this.isListening) return;
+        document.body.classList.remove('voice-active');
+        // Algunos navegadores terminan la escucha continua incluso sin pedirlo.
+        if (++restarts > 3) {
+          this.fail('El navegador detuvo la escucha. Activa el control por voz nuevamente.');
+          return;
+        }
+        this.statusMessage = 'Reanudando control por voz...';
+        this.restartTimer = setTimeout(() => {
+          this.restartTimer = null;
+          if (this.recognition !== recognition || !this.isListening) return;
+          try {
+            recognition.start();
+          } catch {
+            this.fail('No se pudo reanudar el control por voz. Activalo nuevamente.');
+          }
+        }, 300);
+      };
+      recognition.start();
+    } catch {
+      this.fail('No se pudo iniciar el reconocimiento de voz. Revisa los permisos del microfono.');
+    }
   }
 
   stopListening() {
     this.isListening = false;
-    document.body.classList.remove('voice-active');
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-    }
-    if (this.deepgramSocket) {
-      this.deepgramSocket.close();
-      this.deepgramSocket = null;
-    }
+    this.statusMessage = 'Control por voz desactivado.';
+    if (typeof document !== 'undefined') document.body.classList.remove('voice-active');
+    if (this.restartTimer !== null) clearTimeout(this.restartTimer);
+    this.restartTimer = null;
+    const recognition = this.recognition;
+    this.recognition = null;
+    if (!recognition) return;
+    recognition.onstart = recognition.onend = recognition.onerror = recognition.onresult = null;
+    try { recognition.abort(); } catch { /* Ya puede estar detenido. */ }
   }
 
-  private async connectDeepgram() {
-    this.isListening = true;
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const deepgramUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true&interim_results=true`;
-
-      this.deepgramSocket = new WebSocket(deepgramUrl, ['token', this.deepgramApiKey]);
-
-      this.deepgramSocket.onopen = () => {
-        console.log('Asistente de Voz DOCgosi: Activo');
-        document.body.classList.add('voice-active');
-
-        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        this.mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0 && this.deepgramSocket && this.deepgramSocket.readyState === 1) {
-            this.deepgramSocket.send(e.data);
-          }
-        };
-        this.mediaRecorder.start(250); 
-      };
-
-      this.deepgramSocket.onmessage = (event: any) => {
-        const data = JSON.parse(event.data);
-        if (data.channel && data.channel.alternatives && data.channel.alternatives[0]) {
-          const transcripcion = data.channel.alternatives[0].transcript.toLowerCase();
-          if (transcripcion && transcripcion.trim().length > 0 && data.is_final) {
-            this.handleTranscripcion(transcripcion);
-          }
-        }
-      };
-
-      this.deepgramSocket.onclose = () => {
-        if (this.isListening) {
-          console.warn('Conexión con Deepgram cerrada inesperadamente. Reintentando...');
-          setTimeout(() => this.connectDeepgram(), 2000);
-        } else {
-          document.body.classList.remove('voice-active');
-        }
-      };
-
-    } catch (e) {
-      console.error('Error al iniciar micrófono para accesibilidad', e);
-      this.isListening = false;
-      document.body.classList.remove('voice-active');
-    }
+  private fail(message: string) {
+    this.stopListening();
+    this.errorMessage = message;
+    this.statusMessage = message;
+    this.commandDetected.next(message);
   }
 
   private handleTranscripcion(text: string) {
-    console.log('Comando Voz original:', text);
-    
-    // Limpiar puntuación que añade Deepgram (puntos, comas)
+    // Limpiar puntuacion del reconocimiento.
     const cleanText = text.toLowerCase().replace(/[.,!¡¿?]/g, '').trim();
-    console.log('Comando Voz limpio:', cleanText);
 
     // INICIO
     if (cleanText.includes('ir a inicio') || cleanText.includes('ir al inicio') || cleanText.includes('vuelve al inicio') || cleanText.includes('volver al inicio')) {

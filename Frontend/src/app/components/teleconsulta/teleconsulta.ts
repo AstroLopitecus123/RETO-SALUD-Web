@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef, ViewChild, ElementRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
@@ -61,6 +61,51 @@ export class TeleconsultaComponent implements OnInit, OnDestroy {
   selectedCamId: string = '';
   showMicMenu: boolean = false;
   showCamMenu: boolean = false;
+  private deviceTrigger: HTMLElement | null = null;
+
+  toggleDeviceMenu(kind: 'mic' | 'cam', event: Event) {
+    this.deviceTrigger = event.currentTarget as HTMLElement;
+    const open = kind === 'mic' ? !this.showMicMenu : !this.showCamMenu;
+    this.showMicMenu = kind === 'mic' && open;
+    this.showCamMenu = kind === 'cam' && open;
+    if (open) setTimeout(() => document.querySelector<HTMLElement>(`#${kind}-devices button`)?.focus());
+  }
+
+  deviceMenuKey(event: KeyboardEvent) {
+    const menu = event.currentTarget as HTMLElement;
+    const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+    const index = items.indexOf(document.activeElement as HTMLButtonElement);
+    let next = index;
+    if (event.key === 'ArrowDown') next = (index + 1) % items.length;
+    else if (event.key === 'ArrowUp') next = (index - 1 + items.length) % items.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    else return;
+    event.preventDefault();
+    items[next]?.focus();
+  }
+
+  @HostListener('document:click', ['$event']) cerrarDispositivosFuera(event: MouseEvent) {
+    if (!(event.target as HTMLElement).closest('[data-device-control]')) {
+      this.showMicMenu = this.showCamMenu = false;
+    }
+  }
+
+  @HostListener('document:keydown', ['$event']) cerrarDispositivosTeclado(event: KeyboardEvent) {
+    if (event.key === 'Escape' && (this.showMicMenu || this.showCamMenu)) {
+      event.preventDefault();
+      this.showMicMenu = this.showCamMenu = false;
+      this.deviceTrigger?.focus();
+    } else if (event.key === 'Tab' && (this.showMicMenu || this.showCamMenu)) {
+      const menu = (event.target as HTMLElement).closest('.device-menu-container');
+      const items = menu?.querySelectorAll('button');
+      if (items && (event.shiftKey ? event.target === items[0] : event.target === items[items.length - 1])) {
+        event.preventDefault();
+        this.showMicMenu = this.showCamMenu = false;
+        this.deviceTrigger?.focus();
+      }
+    }
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -271,40 +316,35 @@ export class TeleconsultaComponent implements OnInit, OnDestroy {
       this.cameras = await AgoraRTC.getCameras();
       this.microphones = await AgoraRTC.getMicrophones();
       
-      // Intentar obtener el ID activo actual o usar el primero
-      this.selectedMicId = this.localAudioTrack?.getTrackLabel() || this.microphones[0]?.deviceId || '';
-      this.selectedCamId = this.localVideoTrack?.getTrackLabel() || this.cameras[0]?.deviceId || '';
+      this.selectedMicId = this.localAudioTrack?.getMediaStreamTrack().getSettings().deviceId || '';
+      this.selectedCamId = this.localVideoTrack?.getMediaStreamTrack().getSettings().deviceId || '';
     } catch(e) {
       console.warn('No se pudieron cargar los dispositivos', e);
     }
   }
 
-  onRightClickMic(event: MouseEvent) {
-    event.preventDefault();
-    this.showMicMenu = !this.showMicMenu;
-    this.showCamMenu = false;
-  }
-
-  onRightClickCam(event: MouseEvent) {
-    event.preventDefault();
-    this.showCamMenu = !this.showCamMenu;
-    this.showMicMenu = false;
-  }
-
   async changeAudioDevice(deviceId: string) {
-    if (this.localAudioTrack) {
+    try {
+      if (!this.localAudioTrack) return;
       await this.localAudioTrack.setDevice(deviceId);
-      this.selectedMicId = deviceId;
+      this.selectedMicId = this.localAudioTrack.getMediaStreamTrack().getSettings().deviceId || deviceId;
+      this.showMicMenu = false;
+      this.deviceTrigger?.focus();
+    } catch {
+      this.ns.error('No se pudo cambiar el micrófono.');
     }
-    this.showMicMenu = false;
   }
 
   async changeVideoDevice(deviceId: string) {
-    if (this.localVideoTrack) {
+    try {
+      if (!this.localVideoTrack) return;
       await this.localVideoTrack.setDevice(deviceId);
-      this.selectedCamId = deviceId;
+      this.selectedCamId = this.localVideoTrack.getMediaStreamTrack().getSettings().deviceId || deviceId;
+      this.showCamMenu = false;
+      this.deviceTrigger?.focus();
+    } catch {
+      this.ns.error('No se pudo cambiar la cámara.');
     }
-    this.showCamMenu = false;
   }
 
   async salirDeSala() {
@@ -313,11 +353,7 @@ export class TeleconsultaComponent implements OnInit, OnDestroy {
     await this.rtcClient?.leave();
     this.ngOnDestroy();
     
-    if (this.rol === 'MEDICO') {
-      this.router.navigate(['/medico/agenda']);
-    } else {
-      this.router.navigate(['/paciente/mis-citas']);
-    }
+    this.router.navigate(['/mis-citas']);
   }
 
   isSpeaking(uid: any): boolean {
@@ -501,6 +537,7 @@ export class TeleconsultaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    clearInterval(this.infoIntervalId);
     this.detenerReconocimientoVoz();
     if(this.localAudioTrack) {
         this.localAudioTrack.close();

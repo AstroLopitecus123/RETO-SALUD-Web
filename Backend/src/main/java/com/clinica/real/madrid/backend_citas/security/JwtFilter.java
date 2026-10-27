@@ -9,6 +9,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -46,23 +47,26 @@ public class JwtFilter extends OncePerRequestFilter {
 
             try {
                 username = jwtUtil.getUsernameFromToken(token);
-            } catch (Exception e) {
-                System.err.println("❌ No se pudo extraer el usuario del token (puede estar expirado)");
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+                SecurityContextHolder.clearContext();
             }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            boolean valido = jwtUtil.validateToken(token);
+                boolean valido = userDetails instanceof UsuarioPrincipal principal && jwtUtil.validateToken(token, principal);
 
-            if (valido && userDetails.isEnabled()) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (valido && userDetails.isEnabled()) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (UsernameNotFoundException e) {
+                SecurityContextHolder.clearContext();
             }
-
         }
 
         filterChain.doFilter(request, response);

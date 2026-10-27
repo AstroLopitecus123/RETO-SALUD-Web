@@ -36,26 +36,19 @@ public class NotificacionService {
         return notificacionRepository.countUnreadByUsuarioOrRolDestino(usuarioId, rol, fechaRegistro);
     }
 
-    public Notificacion marcarComoLeida(Long id) {
-        return marcarComoLeida(id, null);
-    }
-
-    public Notificacion marcarComoLeida(Long id, Long usuarioId) {
-        try {
-            Notificacion notificacion = notificacionRepository.findById(id).orElse(null);
-            if (notificacion == null) {
-                return null;
-            }
-            if (usuarioId != null && notificacion.getUsuarioDestino() != null && !notificacion.getUsuarioDestino().getId().equals(usuarioId)) {
-                throw new com.clinica.real.madrid.backend_citas.exception.BadRequestException("No puedes modificar notificaciones ajenas");
-            }
-            notificacion.setLeida(true);
-            return notificacionRepository.save(notificacion);
-        } catch (com.clinica.real.madrid.backend_citas.exception.BadRequestException e) {
-            throw e;
-        } catch (Exception e) {
-            System.err.println("Error al marcar notificación como leída: " + e.getMessage());
+    public Notificacion marcarComoLeida(Long id, Long usuarioId, String rol, LocalDateTime fechaRegistro) {
+        Notificacion notificacion = notificacionRepository.findById(id).orElse(null);
+        if (notificacion == null) {
             return null;
         }
+        boolean destinatario = usuarioId != null && (notificacion.getUsuarioDestino() != null
+                ? usuarioId.equals(notificacion.getUsuarioDestino().getId())
+                : rol != null && rol.equals(notificacion.getRolDestino()));
+        if (!destinatario || fechaRegistro == null || notificacion.getFechaCreacion() == null
+                || notificacion.getFechaCreacion().isBefore(fechaRegistro)) {
+            throw new org.springframework.security.access.AccessDeniedException("No puedes modificar notificaciones ajenas");
+        }
+        notificacion.setLeida(true);
+        return notificacionRepository.save(notificacion);
     }
 }

@@ -7,6 +7,7 @@ import { Historial } from '../../models/historial.model';
 import { NotificationService } from '../../services/notification.service';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { defer } from 'rxjs';
 
 /** Estructura agrupada por paciente (solo para roles no-PACIENTE) */
 export interface PacienteAgrupado {
@@ -65,15 +66,16 @@ export class HistorialMedicoComponent implements OnInit {
 
   cargarHistorial() {
     this.cargando = true;
-    let request$;
-
-    if (this.usuario.rol === 'PACIENTE') {
-      request$ = this.historialService.obtenerHistorialPorPaciente(this.usuario.id);
-    } else if (this.pacienteId && this.pacienteId !== this.usuario.id) {
-      request$ = this.historialService.obtenerHistorialPorPaciente(this.pacienteId);
-    } else {
-      request$ = this.historialService.listarTodasConCitas();
-    }
+    this.error = '';
+    const request$ = defer(() => {
+      if (this.usuario.rol === 'PACIENTE') {
+        return this.historialService.obtenerHistorialPorPaciente(this.usuario.id);
+      }
+      if (this.pacienteId && this.pacienteId !== this.usuario.id) {
+        return this.historialService.obtenerHistorialPorPaciente(this.pacienteId);
+      }
+      return this.historialService.listarTodasConCitas();
+    });
 
     request$.subscribe({
       next: (data) => {
@@ -90,6 +92,10 @@ export class HistorialMedicoComponent implements OnInit {
       error: (err) => {
         console.error(err);
         this.error = 'Error al cargar el historial clínico.';
+        this.historiales = [];
+        this.historialesFiltrados = [];
+        this.pacientesAgrupados = [];
+        this.pacientesAgrupadosFiltrados = [];
         this.cargando = false;
       }
     });

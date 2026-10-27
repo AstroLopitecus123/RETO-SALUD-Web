@@ -45,30 +45,7 @@ public class TeleconsultaController {
             HttpServletRequest httpRequest,
             Authentication auth) {
 
-        String ip = httpRequest.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) {
-            ip = httpRequest.getRemoteAddr();
-        } else {
-            ip = ip.split(",")[0].trim();
-        }
-
-        long ahora = System.currentTimeMillis();
-        if (peticionesPorIp.size() > 1000) {
-            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
-        }
-        boolean bloqueado = peticionesPorIp.compute(ip, (k, lista) -> {
-            if (lista == null) {
-                lista = new ArrayList<>();
-            }
-            lista.removeIf(timestamp -> (ahora - timestamp) > 60_000);
-            if (lista.size() >= MAX_PETICIONES_POR_MINUTO) {
-                return lista;
-            }
-            lista.add(ahora);
-            return lista;
-        }).size() > MAX_PETICIONES_POR_MINUTO;
-
-        if (bloqueado) {
+        if (!admitir(httpRequest.getRemoteAddr())) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "Demasiadas peticiones. Por favor espere un momento."));
         }
@@ -107,7 +84,7 @@ public class TeleconsultaController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Formato de canal invalido"));
             }
 
-            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UsuarioPrincipal)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Debe iniciar sesion para ingresar a la videollamada"));
             }
 
@@ -137,6 +114,7 @@ public class TeleconsultaController {
             }
 
             config.put("agoraAppId", (aId != null && !aId.isEmpty()) ? aId : "AGORA_NOT_FOUND");
+            // Compatibilidad con el WebSocket actual: solo accesos autorizados al canal reciben la clave.
             config.put("deepgramApiKey", (dKey != null && !dKey.isEmpty()) ? dKey : "DEEPGRAM_NOT_FOUND");
 
             if (aId != null && !aId.isEmpty() && aCert != null && !aCert.isEmpty()) {
@@ -161,7 +139,24 @@ public class TeleconsultaController {
         }
 
         config.put("agoraAppId", (aId != null && !aId.isEmpty()) ? aId : "AGORA_NOT_FOUND");
-        config.put("deepgramApiKey", (dKey != null && !dKey.isEmpty()) ? dKey : "DEEPGRAM_NOT_FOUND");
         return ResponseEntity.ok(config);
+    }
+
+    private static boolean admitir(String ip) {
+        synchronized (peticionesPorIp) {
+            long ahora = System.currentTimeMillis();
+            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty()
+                    || ahora - e.getValue().get(e.getValue().size() - 1) >= 60_000);
+            List<Long> intentos = peticionesPorIp.get(ip);
+            if (intentos == null) {
+                if (peticionesPorIp.size() >= 1000) { return false; }
+                intentos = new ArrayList<>();
+                peticionesPorIp.put(ip, intentos);
+            }
+            intentos.removeIf(ts -> ahora - ts >= 60_000);
+            if (intentos.size() >= MAX_PETICIONES_POR_MINUTO) { return false; }
+            intentos.add(ahora);
+            return true;
+        }
     }
 }

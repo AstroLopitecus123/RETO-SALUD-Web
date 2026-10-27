@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { LoginResponse, Usuario } from '../models/usuario.model';
 import { UsuarioFull } from '../models/usuario-full.model';
@@ -19,6 +19,13 @@ export class UsuarioService {
   usuario$ = this.usuarioSubject.asObservable();
 
   constructor(private http: HttpClient) {}
+
+  limpiarSesion(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    sessionStorage.clear();
+    this.usuarioSubject.next(null);
+  }
 
   private cargarUsuarioLocalStorage(): Usuario | null {
     const user = localStorage.getItem('usuario');
@@ -124,7 +131,19 @@ export class UsuarioService {
   }
 
   loginConGoogle(idToken: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.authUrl}/google`, { idToken })
+    const nonce = sessionStorage.getItem('google_nonce');
+    sessionStorage.removeItem('google_nonce');
+    try {
+      const parts = idToken.split('.');
+      if (parts.length !== 3) throw new Error('Token invalido');
+      const encoded = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')));
+      // Vincula la respuesta a esta pestana; la firma se verifica solo en backend.
+      if (!nonce || payload.nonce !== nonce) throw new Error('Nonce invalido');
+    } catch {
+      return throwError(() => new Error('Respuesta de Google no valida. Inicia sesion nuevamente.'));
+    }
+    return this.http.post<LoginResponse>(`${this.authUrl}/google`, { idToken, nonce })
       .pipe(
         tap(res => {
           if (res.token) {

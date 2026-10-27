@@ -6,6 +6,8 @@ import { NotificationService } from '../../services/notification.service';
 import { UsuarioFull } from '../../models/usuario-full.model';
 import { Pais } from '../../models/pais.model';
 import { AvatarCropperComponent } from '../avatar-cropper/avatar-cropper.component';
+import { Router } from '@angular/router';
+import { AppComponent } from '../../app';
 
 @Component({
   selector: 'app-mi-perfil',
@@ -38,7 +40,9 @@ export class MiPerfilComponent implements OnInit {
 
   constructor(
     private usuarioService: UsuarioService,
-    private ns: NotificationService
+    private ns: NotificationService,
+    private router: Router,
+    private app: AppComponent
   ) {}
 
   ngOnInit(): void {
@@ -226,6 +230,9 @@ export class MiPerfilComponent implements OnInit {
 
   cerrarModalPassword() {
     this.mostrarModalPassword = false;
+    this.pwdActual = '';
+    this.pwdNueva = '';
+    this.pwdConfirmar = '';
   }
 
   ejecutarCambioPassword() {
@@ -268,8 +275,13 @@ export class MiPerfilComponent implements OnInit {
     .cambiarPassword(this.usuario.id, actual, nueva)
     .subscribe({
       next: () => {
-        this.ns.success('¡Contraseña actualizada correctamente!');
         this.cerrarModalPassword();
+        this.usuarioService.limpiarSesion();
+        this.app.verificarLogin();
+        this.usuario = new UsuarioFull();
+        this.usuarioEditado = new UsuarioFull();
+        this.ns.success('Contrasena actualizada. Tu sesion se cerro por seguridad; inicia sesion nuevamente.');
+        this.router.navigate(['/login'], { replaceUrl: true });
       },
       error: (err) => {
         const msg =

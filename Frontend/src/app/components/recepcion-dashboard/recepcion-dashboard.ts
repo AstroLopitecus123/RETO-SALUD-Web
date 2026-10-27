@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { forkJoin, defer } from 'rxjs';
+import { CitaService } from '../../services/cita.service';
+import { MedicoService } from '../../services/medico.service';
 
 import { NotificacionesComponent } from '../notificaciones/notificaciones';
 
@@ -15,14 +17,15 @@ import { NotificacionesComponent } from '../notificaciones/notificaciones';
 export class RecepcionDashboardComponent implements OnInit {
   usuario: any = null;
   cargando = true;
+  error = '';
   today = new Date();
   stats = {
     citasHoy: 0,
-    medicosActivos: 0,
+    medicosRegistrados: 0,
     pendientesConfirmar: 0
   };
 
-  constructor(private http: HttpClient) {}
+  constructor(private citaService: CitaService, private medicoService: MedicoService) {}
 
   ngOnInit() {
     const usuarioStr = localStorage.getItem('usuario');
@@ -34,14 +37,26 @@ export class RecepcionDashboardComponent implements OnInit {
 
   cargarDatos() {
 
-    setTimeout(() => {
-      this.stats = {
-        citasHoy: 25,
-        medicosActivos: 8,
-        pendientesConfirmar: 5
-      };
-      this.cargando = false;
-    }, 800);
+    this.cargando = true;
+    this.error = '';
+    forkJoin({
+      citas: defer(() => this.citaService.listarTodas()),
+      medicos: defer(() => this.medicoService.listarMedicos())
+    }).subscribe({
+      next: ({ citas, medicos }) => {
+        this.today = new Date();
+        this.stats = {
+          citasHoy: citas.filter(c => new Date(c.fecha).toDateString() === this.today.toDateString()).length,
+          pendientesConfirmar: citas.filter(c => c.estado === 'PENDIENTE').length,
+          medicosRegistrados: medicos.length
+        };
+        this.cargando = false;
+      },
+      error: () => {
+        this.error = 'No se pudieron cargar las métricas de recepción.';
+        this.cargando = false;
+      }
+    });
   }
 
   getGreeting(): string {

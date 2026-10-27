@@ -1,16 +1,15 @@
 
 <aside aria-label="Asistente Virtual">
-<div class="chatbot-fab" 
+<button #chatLauncher type="button" class="chatbot-fab"
      (click)="toggleChat()" 
-     (keydown.enter)="toggleChat()"
      [class.hidden]="isOpen"
-     tabindex="0" 
-     role="button" 
+     [attr.tabindex]="isOpen ? -1 : 0"
+     [attr.aria-expanded]="isOpen" aria-controls="chatbot-panel"
      aria-label="Abrir asistente de chat">
   <i class="fa-solid fa-comment-medical"></i>
-</div>
+</button>
 
-<div class="chatbot-window" [class.open]="isOpen">
+<div id="chatbot-panel" class="chatbot-window" [class.open]="isOpen" [attr.inert]="!isOpen ? '' : null" [attr.aria-hidden]="!isOpen" (keydown.escape)="toggleChat(); $event.stopPropagation()">
 
   <div class="chatbot-header">
     <div class="header-info">
@@ -22,11 +21,11 @@
     </button>
   </div>
 
-  <div class="lang-selector">
-    <i class="fa-solid fa-globe"></i> Español <i class="fa-solid fa-chevron-down ml-5"></i>
+  <div class="lang-selector" style="cursor: default; pointer-events: none;" aria-label="Idioma: Español">
+    <i class="fa-solid fa-globe" aria-hidden="true"></i> Español
   </div>
 
-  <div class="chatbot-messages" #chatScroll>
+  <div class="chatbot-messages" #chatScroll (scroll)="onScroll()">
 
     <div class="message-wrapper" *ngFor="let msg of messages" [ngClass]="msg.role">
       <div class="avatar" *ngIf="msg.role === 'bot'">
@@ -49,7 +48,7 @@
       <p class="qa-title">R.E.T.O Salud</p>
       <div class="qa-grid">
         <button (click)="sendQuickAction('Quiero encontrar un médico')">Encontrar un médico</button>
-        <button (click)="sendQuickAction('Ver mis citas')">Nuestras especialidades</button>
+        <button (click)="sendQuickAction('¿Cuáles son sus especialidades médicas?')">Nuestras especialidades</button>
         <button (click)="sendQuickAction('¿Cuáles son sus horarios de atención?')">Horarios de atención</button>
         <button (click)="sendQuickAction('Comenzar una cita virtual')">Comienza una cita virtual</button>
       </div>
@@ -61,7 +60,7 @@
   </div>
 
   <div class="chatbot-input">
-    <input 
+    <input #chatInput
       type="text" 
       placeholder="Pregúntame lo que desees..." 
       [(ngModel)]="userInput" 

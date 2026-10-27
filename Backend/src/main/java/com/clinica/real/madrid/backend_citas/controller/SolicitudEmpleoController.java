@@ -22,32 +22,30 @@ public class SolicitudEmpleoController {
 
     @PostMapping
     public ResponseEntity<?> enviarSolicitud(@RequestBody SolicitudEmpleo solicitud, jakarta.servlet.http.HttpServletRequest httpRequest) {
-        String ip = httpRequest.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) {
-            ip = httpRequest.getRemoteAddr();
-        } else {
-            ip = ip.split(",")[0].trim();
-        }
-
-        long ahora = System.currentTimeMillis();
-        if (peticionesPorIp.size() > 1000) {
-            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 600_000);
-        }
-
-        boolean bloqueado = peticionesPorIp.compute(ip, (k, lista) -> {
-            if (lista == null) { lista = new java.util.ArrayList<>(); }
-            lista.removeIf(ts -> (ahora - ts) > 600_000);
-            if (lista.size() >= MAX_SOLICITUDES_POR_10_MIN) { return lista; }
-            lista.add(ahora);
-            return lista;
-        }).size() > MAX_SOLICITUDES_POR_10_MIN;
-
-        if (bloqueado) {
+        if (!admitir(httpRequest.getRemoteAddr())) {
             return ResponseEntity.status(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Demasiadas solicitudes enviadas. Por favor espere unos minutos."));
         }
 
         return ResponseEntity.ok(solicitudService.enviarSolicitud(solicitud));
+    }
+
+    private static boolean admitir(String ip) {
+        synchronized (peticionesPorIp) {
+            long ahora = System.currentTimeMillis();
+            peticionesPorIp.entrySet().removeIf(e -> e.getValue().isEmpty()
+                    || ahora - e.getValue().get(e.getValue().size() - 1) >= 600_000);
+            List<Long> intentos = peticionesPorIp.get(ip);
+            if (intentos == null) {
+                if (peticionesPorIp.size() >= 1000) { return false; }
+                intentos = new java.util.ArrayList<>();
+                peticionesPorIp.put(ip, intentos);
+            }
+            intentos.removeIf(ts -> ahora - ts >= 600_000);
+            if (intentos.size() >= MAX_SOLICITUDES_POR_10_MIN) { return false; }
+            intentos.add(ahora);
+            return true;
+        }
     }
 
     @GetMapping

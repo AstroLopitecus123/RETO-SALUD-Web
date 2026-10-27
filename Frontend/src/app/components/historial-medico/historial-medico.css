@@ -216,13 +216,12 @@
    ACORDEÓN — LISTADO DE CITAS
    ============================================================ */
 .citas-acordeon {
-    max-height: 0;
+    display: none;
     overflow: hidden;
-    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     border-top: 0px solid #f1f5f9;
 }
 .citas-acordeon.expandido {
-    max-height: 5000px; /* suficiente para cualquier número de citas */
+    display: block;
     border-top: 1.5px solid #f1f5f9;
 }
 

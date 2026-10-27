@@ -99,7 +99,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   loginConGoogle(): void {
-    const nonce = Math.random().toString(36).substring(2);
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
     sessionStorage.setItem('google_nonce', nonce);
 
     const params = new URLSearchParams({

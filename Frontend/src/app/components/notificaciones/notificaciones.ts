@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { NotificacionService, Notificacion } from '../../services/notificacion.service';
 import { NotificationService } from '../../services/notification.service';
+import { catchError, defer, forkJoin, map, of } from 'rxjs';
 
 @Component({
   selector: 'app-notificaciones',
@@ -15,6 +16,9 @@ export class NotificacionesComponent implements OnInit {
   notificaciones: Notificacion[] = [];
   filtro: 'TODAS' | 'NO_LEIDAS' = 'TODAS';
   loading = true;
+  error = '';
+  errorAccion = '';
+  marcandoTodas = false;
   notificacionSeleccionada: Notificacion | null = null;
   mostrarModal = false;
 
@@ -32,7 +36,8 @@ export class NotificacionesComponent implements OnInit {
 
   cargarNotificaciones(): void {
     this.loading = true;
-    this.notificacionService.getMisNotificaciones().subscribe({
+    this.error = '';
+    defer(() => this.notificacionService.getMisNotificaciones()).subscribe({
       next: (res) => {
         this.notificaciones = res.sort((a, b) => 
           new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
@@ -41,7 +46,7 @@ export class NotificacionesComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        if (this.ns) this.ns.error('No se pudieron cargar las notificaciones');
+        this.error = 'No se pudieron cargar las notificaciones.';
       }
     });
   }
@@ -64,7 +69,7 @@ export class NotificacionesComponent implements OnInit {
           notif.leida = true;
           this.notificacionService.notificarCambio(); 
         },
-        error: () => {}
+        error: () => { this.errorAccion = 'No se pudo marcar la notificación como leída.'; }
       });
     }
 
@@ -104,19 +109,22 @@ export class NotificacionesComponent implements OnInit {
   }
 
   marcarTodasComoLeidas(): void {
+    if (this.marcandoTodas || this.loading || this.error) return;
     const noLeidas = this.notificaciones.filter(n => !n.leida);
     if (noLeidas.length === 0) return;
-
-    noLeidas.forEach(n => {
-      this.notificacionService.marcarComoLeida(n.id).subscribe({
-        next: () => {
-          n.leida = true;
-          this.notificacionService.notificarCambio();
-        },
-        error: () => {}
-      });
+    this.marcandoTodas = true;
+    this.errorAccion = '';
+    forkJoin(noLeidas.map(n => defer(() => this.notificacionService.marcarComoLeida(n.id)).pipe(
+      map(() => ({ notificacion: n, ok: true })),
+      catchError(() => of({ notificacion: n, ok: false }))
+    ))).subscribe(resultados => {
+      resultados.forEach(r => { if (r.ok) r.notificacion.leida = true; });
+      this.marcandoTodas = false;
+      if (resultados.some(r => r.ok)) this.notificacionService.notificarCambio();
+      if (resultados.some(r => !r.ok)) {
+        this.errorAccion = 'No se pudieron marcar todas las notificaciones. Puedes reintentar las pendientes.';
+      }
     });
-    if (this.ns) this.ns.success('Todas las notificaciones marcadas como leídas');
   }
 
   getIconClass(titulo: string): string {

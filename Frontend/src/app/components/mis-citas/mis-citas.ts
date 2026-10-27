@@ -50,7 +50,7 @@ export class MisCitasComponent implements OnInit, OnDestroy {
 
     this.pollingSub = interval(5000).subscribe(() => {
 
-      if (!this.ctrl.editando && !this.ctrl.mostrandoModalCita && !this.ctrl.mostrandoModalCancelar && !this.ctrl.mostrandoModalHistorial) {
+      if (!document.hidden && !this.ctrl.cargando && !this.ctrl.editando && !this.ctrl.mostrandoModalCita && !this.ctrl.mostrandoModalCancelar && !this.ctrl.mostrandoModalHistorial) {
          this.ctrl.cargarCitas(false);
       }
     });

@@ -2,10 +2,15 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 80vh;
+  min-height: 80vh;
+  padding: 24px 16px;
+  box-sizing: border-box;
 }
 
 .card {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   background: #fff;
   padding: 2rem;
   border-radius: 15px;
@@ -20,6 +25,8 @@ h2 {
 }
 
 input {
+  box-sizing: border-box;
+  min-width: 0;
   width: 100%;
   padding: 0.6rem;
   border-radius: 5px;
@@ -27,6 +34,8 @@ input {
 }
 
 .btn-guardar {
+  max-width: 100%;
+  white-space: normal;
   background-color: #28a745;
   color: white;
   border: none;

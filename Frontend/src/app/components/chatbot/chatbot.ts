@@ -29,17 +29,34 @@ export class ChatbotComponent implements AfterViewChecked {
   ];
 
   @ViewChild('chatScroll') private chatScrollContainer!: ElementRef;
+  @ViewChild('chatLauncher') private chatLauncher!: ElementRef<HTMLButtonElement>;
+  @ViewChild('chatInput') private chatInput!: ElementRef<HTMLInputElement>;
+  private renderedMessageCount = 0;
+  private nearBottom = true;
 
   constructor(private chatbotService: ChatbotService) {}
 
   ngAfterViewChecked() {
-    this.scrollToBottom();
+    if (this.renderedMessageCount !== this.messages.length) {
+      this.renderedMessageCount = this.messages.length;
+      if (this.isOpen && this.nearBottom) this.scrollToBottom();
+    }
+  }
+
+  onScroll() {
+    const el = this.chatScrollContainer.nativeElement;
+    this.nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   }
 
   toggleChat() {
     this.isOpen = !this.isOpen;
     if (this.isOpen) {
-      setTimeout(() => this.scrollToBottom(), 100);
+      setTimeout(() => {
+        this.chatInput.nativeElement.focus();
+        if (this.nearBottom) this.scrollToBottom();
+      });
+    } else {
+      this.chatLauncher.nativeElement.focus();
     }
   }
 

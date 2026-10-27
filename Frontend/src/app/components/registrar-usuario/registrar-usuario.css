@@ -49,6 +49,8 @@
 .login-form-wrapper {
   position: relative;
   z-index: 3;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .login-hero {
@@ -60,6 +62,9 @@
 }
 
 .hero-glass-panel {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(20px) saturate(200%);
   -webkit-backdrop-filter: blur(20px) saturate(200%);
@@ -68,7 +73,7 @@
   border-left: 8px solid #098246; 
   padding: 45px 55px; 
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
-  margin-left: 320px; /* Ajustado para que no empuje tanto al otro panel */
+  margin-left: clamp(0px, calc(100vw - 1400px), 320px);
   width: 600px; 
   animation: slideFadeIn 0.8s ease-out;
 }
@@ -153,6 +158,8 @@
 }
 
 .login-card {
+  box-sizing: border-box;
+  min-width: 0;
   background: #ffffff;
   width: 100%;
   border-radius: 24px;
@@ -204,6 +211,7 @@
 
 /* Botón de Google redirect (Premium) */
 .google-redirect-btn {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -278,12 +286,12 @@
 /* GRID DEL FORMULARIO COMPACTO */
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 8px;
 }
 
-.input-group { margin-bottom: 8px; position: relative; }
+.input-group { margin-bottom: 8px; position: relative; min-width: 0; }
 
 .input-group label {
   display: block;
@@ -316,13 +324,15 @@
 .input-with-domain {
   display: flex;
   position: relative;
+  align-items: center;
+  gap: 8px;
 }
 
+.input-with-domain input { flex: 1; min-width: 0; width: 0; }
+
 .domain-tag {
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
+  white-space: nowrap;
   background: #f1f4f8;
   padding: 4px 8px;
   border-radius: 6px;
@@ -362,6 +372,7 @@
 
 /* BOTONES */
 .btn-submit {
+  box-sizing: border-box;
   width: 100%;
   background: linear-gradient(135deg, #0a7c4a 0%, #098246 100%);
   color: white;
@@ -417,9 +428,9 @@
   color: #b91c1c;
   font-size: 0.7rem;
   font-weight: 700;
-  position: absolute;
-  bottom: -15px;
-  left: 5px;
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
 }
 
 .status-messages { margin-top: 10px; } /* Reducido */
@@ -531,6 +542,8 @@
 @media (max-width: 768px) {
   .login-layout { flex-direction: column; overflow-y: auto; }
   .doctor-container { display: none; }
+  .login-hero, .login-form-wrapper { padding: 24px 16px; }
+  .hero-glass-panel { width: 100%; margin-left: 0; padding: 25px; }
 }
 
 /* ─── PASOS DE REGISTRO (Accesibilidad) ───────────────── */

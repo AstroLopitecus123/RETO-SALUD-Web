@@ -20,7 +20,7 @@
       </div>
     </header>
 
-    <div class="stats-grid">
+    <div class="stats-grid" *ngIf="!cargando && !error">
       <div class="stat-card kpi-info">
         <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
         <div class="stat-info">
@@ -65,7 +65,10 @@
            <p class="mt-2">Cargando transacciones...</p>
         </div>
 
-        <div class="modern-table-container" *ngIf="!cargando && pagos.length; else noPagos">
+        <div *ngIf="!cargando && error" role="alert">
+          <p>{{ error }}</p><button (click)="cargarPagos()">Reintentar</button>
+        </div>
+        <div class="modern-table-container" *ngIf="!cargando && !error && pagos.length; else noPagos">
           <table class="modern-table">
             <thead>
               <tr>
@@ -137,7 +140,7 @@
         </div>
 
         <ng-template #noPagos>
-          <div *ngIf="!cargando" class="empty-state">
+          <div *ngIf="!cargando && !error" class="empty-state">
              <i class="fa-solid fa-file-invoice-dollar"></i>
              <p>Sin transacciones financieras</p>
              <span>No hemos detectado registros de pagos o facturación asociados a tu cuenta en este momento.</span>

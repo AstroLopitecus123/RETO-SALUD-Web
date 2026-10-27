@@ -21,10 +21,13 @@ public class PagoController {
     @Autowired
     private PagoService pagoService;
 
+    @Autowired
+    private com.clinica.real.madrid.backend_citas.service.CitaService citaService;
+
     private boolean esStaff(Authentication auth) {
         if (auth == null) return false;
         return auth.getAuthorities().stream().anyMatch(a ->
-            a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION") || a.getAuthority().equals("ROLE_MEDICO")
+            a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_RECEPCION")
         );
     }
 
@@ -38,6 +41,9 @@ public class PagoController {
     @PostMapping("/promesa-efectivo")
     @PreAuthorize("hasRole('PACIENTE')")
     public ResponseEntity<PagoResponse> prometerEfectivo(@RequestBody PagoEfectivoRequest request, Authentication auth) {
+        if (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal)) {
+            throw new org.springframework.security.access.AccessDeniedException("Usuario autenticado requerido");
+        }
         if (auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
             request.setUsuarioId(principal.getId());
         }
@@ -55,6 +61,9 @@ public class PagoController {
     @PostMapping("/crear-intent")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PaymentIntentResponse> crearPaymentIntent(@RequestBody PaymentIntentRequest request, Authentication auth) throws StripeException {
+        if (!esStaff(auth) && (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal))) {
+            throw new org.springframework.security.access.AccessDeniedException("Usuario autenticado requerido");
+        }
         if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
             request.setUsuarioId(principal.getId());
         }
@@ -65,6 +74,9 @@ public class PagoController {
     @PostMapping("/tarjeta")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PagoResponse> pagarTarjeta(@RequestBody PagoTarjetaRequest request, Authentication auth) {
+        if (!esStaff(auth) && (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal))) {
+            throw new org.springframework.security.access.AccessDeniedException("Usuario autenticado requerido");
+        }
         if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
             request.setUsuarioId(principal.getId());
         }
@@ -75,13 +87,19 @@ public class PagoController {
     @GetMapping("/cita/{citaId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO') or hasRole('PACIENTE')")
     public ResponseEntity<List<PagoResponse>> obtenerPagosPorCita(@PathVariable Long citaId, Authentication auth) {
-        List<PagoResponse> response = pagoService.obtenerPagosPorCita(citaId);
-        if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal && !response.isEmpty()) {
-            if (!response.get(0).getUsuarioId().equals(principal.getId())) {
+        if (!esStaff(auth)) {
+            if (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal principal)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
+            var cita = citaService.obtenerPorId(citaId);
+            boolean medico = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"));
+            boolean propio = medico
+                    ? cita.getMedico() != null && cita.getMedico().getUsuario() != null
+                        && principal.getId().equals(cita.getMedico().getUsuario().getId())
+                    : cita.getPaciente() != null && principal.getId().equals(cita.getPaciente().getId());
+            if (!propio) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(pagoService.obtenerPagosPorCita(citaId));
     }
 
     @PutMapping("/anular/{pagoId}")
@@ -105,7 +123,11 @@ public class PagoController {
 
     @GetMapping("/medico/{medicoId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO')")
-    public ResponseEntity<List<PagoResponse>> obtenerPagosPorMedico(@PathVariable Long medicoId) {
+    public ResponseEntity<List<PagoResponse>> obtenerPagosPorMedico(@PathVariable Long medicoId, Authentication auth) {
+        if (!esStaff(auth) && (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal principal)
+                || !citaService.esMedicoPropio(medicoId, principal.getId()))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(pagoService.obtenerPagosPorMedico(medicoId));
     }
 }

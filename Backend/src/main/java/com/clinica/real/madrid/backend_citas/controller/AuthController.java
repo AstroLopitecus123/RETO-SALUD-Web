@@ -10,8 +10,7 @@ import com.clinica.real.madrid.backend_citas.service.UsuarioService;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +24,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private static final Map<String, Integer> intentosFallidosMap = new ConcurrentHashMap<>();
-    private static final Map<String, LocalDateTime> bloqueoExpiraMap = new ConcurrentHashMap<>();
-    private static final Map<String, Long> cooldownRecuperacionMap = new ConcurrentHashMap<>();
+    private static final Map<String, List<Long>> intentosFallidosMap = new ConcurrentHashMap<>();
+    private static final Map<String, List<Long>> cooldownRecuperacionMap = new LinkedHashMap<>();
+    private static final Map<String, List<Long>> recuperacionIntentosPorIp = new ConcurrentHashMap<>();
     private static final Map<String, List<Long>> loginIntentosPorIp = new ConcurrentHashMap<>();
     private static final int MAX_LOGIN_POR_MINUTO = 30;
+    private static final int MAX_RECUPERACION_POR_MINUTO = 5;
 
     @Autowired
     private UsuarioService usuarioService;
@@ -71,24 +71,8 @@ public class AuthController {
     @PostMapping("/login")
     @SuppressWarnings("java:S6098")
     public ResponseEntity<?> login(@RequestBody UsuarioLoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
-        String ip = httpRequest.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) {
-            ip = httpRequest.getRemoteAddr();
-        } else {
-            ip = ip.split(",")[0].trim();
-        }
-        long ahora = System.currentTimeMillis();
-        if (loginIntentosPorIp.size() > 1000) {
-            loginIntentosPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
-        }
-        boolean rateLimited = loginIntentosPorIp.compute(ip, (k, lista) -> {
-            if (lista == null) { lista = new ArrayList<>(); }
-            lista.removeIf(ts -> (ahora - ts) > 60_000);
-            if (lista.size() >= MAX_LOGIN_POR_MINUTO) { return lista; }
-            lista.add(ahora);
-            return lista;
-        }).size() > MAX_LOGIN_POR_MINUTO;
-        if (rateLimited) {
+        // No confiar en X-Forwarded-For proporcionado directamente por el cliente.
+        if (!admitir(loginIntentosPorIp, httpRequest.getRemoteAddr(), MAX_LOGIN_POR_MINUTO, 60_000)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Demasiados intentos de inicio de sesion. Por favor espere 1 minuto."));
         }
@@ -98,15 +82,9 @@ public class AuthController {
                     .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
         }
 
-        LocalDateTime expira = bloqueoExpiraMap.get(correo);
-        if (expira != null) {
-            if (LocalDateTime.now(java.time.ZoneId.systemDefault()).isBefore(expira)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
-            } else {
-                bloqueoExpiraMap.remove(correo);
-                intentosFallidosMap.remove(correo);
-            }
+        if (!admitir(intentosFallidosMap, correo, 5, 900_000)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
         }
 
         try {
@@ -116,7 +94,9 @@ public class AuthController {
 
             Usuario usuario = usuarioService.login(request.getCorreo(), request.getContrasena());
 
-            intentosFallidosMap.remove(correo);
+            synchronized (intentosFallidosMap) {
+                intentosFallidosMap.remove(correo);
+            }
 
             String token = jwtUtil.generateToken(usuario.getCorreo());
 
@@ -131,50 +111,50 @@ public class AuthController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            int intentos = intentosFallidosMap.getOrDefault(correo, 0) + 1;
-            intentosFallidosMap.put(correo, intentos);
-
-            if (intentos >= 5) {
-                bloqueoExpiraMap.put(correo, LocalDateTime.now(java.time.ZoneId.systemDefault()).plusMinutes(15));
-            }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("message", "Credenciales incorrectas o cuenta no disponible."));
         }
     }
 
     @PostMapping("/google")
-    public ResponseEntity<?> loginGoogle(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> loginGoogle(@RequestBody Map<String, String> body, jakarta.servlet.http.HttpServletRequest request) {
+        if (!admitir(loginIntentosPorIp, request.getRemoteAddr(), MAX_LOGIN_POR_MINUTO, 60_000)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("error", "Demasiados intentos"));
+        }
         try {
             String idToken = body.get("idToken");
-            Usuario usuario = usuarioService.loginConGoogle(idToken);
+            Usuario usuario = usuarioService.loginConGoogle(idToken, body.get("nonce"));
             String token = jwtUtil.generateToken(usuario.getCorreo());
             return ResponseEntity.ok(new UsuarioResponse(token, usuario));
         } catch (Exception e) {
-            System.err.println(e.getMessage()); 
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error en Google Auth: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "No se pudo validar la autenticacion con Google"));
         }
     }
 
     @PostMapping("/recuperar")
-    public ResponseEntity<?> recuperar(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> recuperar(@RequestBody Map<String, String> body, jakarta.servlet.http.HttpServletRequest request) {
+        Map<String, String> respuesta = Map.of("mensaje", "Si el correo está registrado, se han enviado las instrucciones para restablecer tu contraseña.");
+        if (!admitir(recuperacionIntentosPorIp, request.getRemoteAddr(), MAX_RECUPERACION_POR_MINUTO, 60_000)) {
+            return ResponseEntity.ok(respuesta);
+        }
         String correo = body.get("correo");
         if (correo != null) {
             correo = correo.toLowerCase().trim();
-            long ahora = System.currentTimeMillis();
-        if (loginIntentosPorIp.size() > 1000) {
-            loginIntentosPorIp.entrySet().removeIf(e -> e.getValue().isEmpty() || (ahora - e.getValue().get(e.getValue().size() - 1)) > 60_000);
-        }
-            Long ultimoEnvio = cooldownRecuperacionMap.get(correo);
-            if (ultimoEnvio != null && (ahora - ultimoEnvio < 60_000)) {
-                return ResponseEntity.ok(Map.of("mensaje", "Si el correo está registrado, se han enviado las instrucciones para restablecer tu contraseña."));
+            synchronized (cooldownRecuperacionMap) {
+                // Solo el cooldown admite eviccion; nunca expulsar bloqueos de login activos.
+                if (!cooldownRecuperacionMap.containsKey(correo) && cooldownRecuperacionMap.size() >= 1000) {
+                    cooldownRecuperacionMap.remove(cooldownRecuperacionMap.keySet().iterator().next());
+                }
+                if (!admitir(cooldownRecuperacionMap, correo, 1, 60_000)) {
+                    return ResponseEntity.ok(respuesta);
+                }
             }
-            cooldownRecuperacionMap.put(correo, ahora);
         }
         try {
             usuarioService.enviarCorreoRecuperacion(correo);
         } catch (Exception ignored) {}
-        return ResponseEntity.ok(Map.of("mensaje", "Si el correo está registrado, se han enviado las instrucciones para restablecer tu contraseña."));
+        return ResponseEntity.ok(respuesta);
     }
 
     @PostMapping("/restablecer")
@@ -183,5 +163,25 @@ public class AuthController {
         String nuevaContrasena = body.get("nuevaContrasena");
         usuarioService.restablecerContrasena(token, nuevaContrasena);
         return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada correctamente."));
+    }
+
+    private static boolean admitir(Map<String, List<Long>> mapa, String clave, int limite, long ventana) {
+        synchronized (mapa) {
+            long ahora = System.currentTimeMillis();
+            mapa.entrySet().removeIf(e -> e.getValue().isEmpty()
+                    || ahora - e.getValue().get(e.getValue().size() - 1) >= ventana);
+            List<Long> intentos = mapa.get(clave);
+            if (intentos == null) {
+                // Una cuenta nueva puede autenticar bajo el limite por IP sin expulsar bloqueos activos.
+                // Los mapas por IP siguen fallando cerrado al alcanzar su capacidad.
+                if (mapa.size() >= 1000) { return mapa == intentosFallidosMap; }
+                intentos = new ArrayList<>();
+                mapa.put(clave, intentos);
+            }
+            intentos.removeIf(ts -> ahora - ts >= ventana);
+            if (intentos.size() >= limite) { return false; }
+            intentos.add(ahora);
+            return true;
+        }
     }
 }

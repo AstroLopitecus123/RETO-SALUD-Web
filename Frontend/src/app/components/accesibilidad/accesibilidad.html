@@ -50,7 +50,7 @@
 <aside aria-label="Menú de Accesibilidad">
 <div class="acc-fab-wrapper">
 
-  <div class="acc-menu" [class.open]="abierto">
+  <div id="accessibility-panel" class="acc-menu" [class.open]="abierto" [attr.inert]="!abierto ? '' : null" [attr.aria-hidden]="!abierto">
 
     <div class="acc-menu-header">
       <button class="btn-back" *ngIf="vistaActual !== 'PRINCIPAL'" (click)="cambiarVista('PRINCIPAL'); $event.stopPropagation()">
@@ -257,10 +257,10 @@
     class="acc-fab"
     [class.activo]="filtroActivo !== 'NINGUNO'"
     (click)="toggleMenu()"
-    (keydown.enter)="toggleMenu()"
     tabindex="0"
     role="button"
     [attr.aria-expanded]="abierto"
+    aria-controls="accessibility-panel"
     [title]="filtroActivo !== 'NINGUNO' ? ('Filtro activo: ' + etiquetaActiva()) : 'Accesibilidad Visual'"
     aria-label="Asistente de Accesibilidad">
     <i class="fa-solid fa-universal-access"></i>
@@ -271,6 +271,7 @@
 
 <div class="acc-test-overlay" *ngIf="mostrandoTest">
   <div class="acc-test-card">
+    <button type="button" data-modal-close class="btn-test-cancel" style="float: right;" aria-label="Cerrar asistente visual" (click)="mostrandoTest = false">Cerrar</button>
 
     <div class="test-step" *ngIf="pasoTest === 0">
       <div class="wizard-premium-header">

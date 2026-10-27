@@ -1,5 +1,6 @@
-import { Component, ViewEncapsulation } from '@angular/core';
-import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouterOutlet, RouterLink } from '@angular/router';
+import { Component, ViewEncapsulation, HostListener, OnDestroy } from '@angular/core';
+import { Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { ModalManagerDirective } from './directives/modal-manager';
 import { CommonModule } from '@angular/common';
 import { Usuario, LoginResponse, RolUsuario } from './models/tipos';
 import { Observable, tap } from 'rxjs';
@@ -16,12 +17,40 @@ import { ViewChild } from '@angular/core';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, CommonModule, ChatbotComponent, ToastComponent, AccesibilidadComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, ChatbotComponent, ToastComponent, AccesibilidadComponent],
+  hostDirectives: [ModalManagerDirective],
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
+  styles: [`
+    .sidebar-mobile-toggle, .sidebar-mobile-close, .sidebar-backdrop { display: none; }
+    @media (max-width: 1024px) {
+      /* Visibility must change before the modal observer runs, not on the next animation frame. */
+      #dashboard-sidebar { transition-property: transform; }
+      .sidebar-mobile-toggle { display: block; position: fixed; top: 12px; left: 12px; z-index: 1001; padding: 12px; background: #fff; color: #164e63; border: 1px solid #164e63; border-radius: 8px; }
+      .sidebar-mobile-close { display: block; align-self: flex-end; padding: 10px 14px; margin: 12px; color: #fff; background: #ffffff1a; border: 1px solid #ffffff40; border-radius: 12px; font: inherit; cursor: pointer; }
+      .sidebar-backdrop { display: block; position: fixed; inset: 0; background: #0008; z-index: 20000; border: 0; }
+      .dashboard-sidebar.open { z-index: 20001; transform: translateX(0); visibility: visible; }
+      .dashboard-sidebar:not(.open) { visibility: hidden; }
+    }
+  `],
   encapsulation: ViewEncapsulation.None
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
+  isMobileSidebar = window.matchMedia('(max-width: 1024px)').matches;
+
+  @HostListener('window:resize') actualizarSidebar() {
+    this.isMobileSidebar = window.matchMedia('(max-width: 1024px)').matches;
+    if (!this.isMobileSidebar) this.isMenuOpen = false;
+  }
+
+  @HostListener('document:keydown.escape') cerrarMenu() {
+    // The modal manager owns Escape and focus restoration for the mobile sidebar.
+    if (!this.isPanelRoute) this.isMenuOpen = false;
+  }
+
+  cerrarSidebarAlNavegar(event: MouseEvent) {
+    if ((event.target as HTMLElement).closest('a')) this.isMenuOpen = false;
+  }
   @ViewChild(AccesibilidadComponent) accesibilidad!: AccesibilidadComponent;
   title = 'RETO Salud';
   usuario: Usuario | null = null;
@@ -53,6 +82,7 @@ export class AppComponent {
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {
+        this.isMenuOpen = false;
 
         const willBePanelRoute = this.checkIfUrlIsPanel(event.url);
 
@@ -311,7 +341,7 @@ export class AppComponent {
 
   iniciarMonitoreoInactividad() {
     this.detenerMonitoreoInactividad();
-    const eventos = ['mousemove', 'click', 'keypress', 'touchstart', 'scroll'];
+    const eventos = ['click', 'keydown', 'touchstart'];
     eventos.forEach(evt => {
       window.addEventListener(evt, this.resetearInactividad);
     });
@@ -319,7 +349,7 @@ export class AppComponent {
   }
 
   detenerMonitoreoInactividad() {
-    const eventos = ['mousemove', 'click', 'keypress', 'touchstart', 'scroll'];
+    const eventos = ['click', 'keydown', 'touchstart'];
     eventos.forEach(evt => {
       window.removeEventListener(evt, this.resetearInactividad);
     });
@@ -362,5 +392,9 @@ export class AppComponent {
     if (this.countdownTimer) clearInterval(this.countdownTimer);
     this.cerrarSesion();
     this.ns.info('Tu sesión ha expirado por inactividad.');
+  }
+
+  ngOnDestroy() {
+    this.detenerMonitoreoInactividad();
   }
 }

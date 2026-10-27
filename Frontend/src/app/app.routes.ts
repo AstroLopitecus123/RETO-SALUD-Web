@@ -41,6 +41,7 @@ export const routes: Routes = [
     title: 'Panel Recepción', canActivate: [RecepcionGuard]
   },
   { path: 'recepcion/pagos', loadComponent: () => import('./components/mis-pagos/mis-pagos').then(m => m.MisPagosComponent), title: 'Pagos Recepción', canActivate: [RecepcionGuard] },
+  { path: 'recepcion/medicos', loadComponent: () => import('./components/recepcion-medicos/recepcion-medicos').then(m => m.RecepcionMedicosComponent), title: 'Consulta de Médicos', canActivate: [RecepcionGuard] },
 
 
   { path: 'paciente/dashboard',

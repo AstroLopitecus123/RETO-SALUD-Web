@@ -157,6 +157,9 @@ export class AccesibilidadComponent implements OnInit {
     if (this.abierto) {
       this.mostrandoTest = false;
       this.vistaActual = 'PRINCIPAL';
+      setTimeout(() => {
+        if (this.abierto) document.querySelector<HTMLElement>('#accessibility-panel button')?.focus();
+      });
     }
   }
 
@@ -397,7 +400,15 @@ export class AccesibilidadComponent implements OnInit {
 
   @HostListener('document:keydown', ['$event'])
   manejarTecladoGlobal(e: KeyboardEvent) {
-    if (!this.modoTeclado) return;
+    if (e.key === 'Escape' && this.abierto) {
+      this.abierto = false;
+      document.querySelector<HTMLElement>('app-accesibilidad .acc-fab')?.focus();
+      return;
+    }
+    const target = e.target as HTMLElement;
+    if (!this.modoTeclado || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey ||
+        target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="slider"], [role="combobox"], [role="listbox"], [role="menu"]') ||
+        document.querySelector('[aria-modal="true"]:not([hidden])')) return;
 
     const teclasNavegacion = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
     if (teclasNavegacion.includes(e.key)) {
@@ -411,7 +422,8 @@ export class AccesibilidadComponent implements OnInit {
     const candidatos = Array.from(document.querySelectorAll(selector))
       .filter(el => {
         const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && (el as HTMLElement).tabIndex >= 0;
+        return rect.width > 0 && rect.height > 0 && (el as HTMLElement).tabIndex >= 0 &&
+          !el.matches(':disabled') && !el.closest('[inert], [hidden], [aria-hidden="true"]');
       }) as HTMLElement[];
 
     const actual = document.activeElement as HTMLElement;

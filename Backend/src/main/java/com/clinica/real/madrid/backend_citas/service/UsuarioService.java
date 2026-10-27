@@ -211,7 +211,11 @@ public class UsuarioService {
         return usuario;
     }
 
-    public Usuario loginConGoogle(String idToken) throws Exception {
+    public Usuario loginConGoogle(String idToken, String expectedNonce) throws Exception {
+        if (idToken == null || idToken.isBlank() || expectedNonce == null || expectedNonce.isBlank()
+                || expectedNonce.length() > 256) {
+            throw new BadRequestException("Token y nonce de Google requeridos");
+        }
         GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
                 .setAudience(Collections.singletonList(googleClientId))
                 .build();
@@ -222,6 +226,7 @@ public class UsuarioService {
         }
 
         GoogleIdToken.Payload payload = token.getPayload();
+        validarNonceGoogle(payload, expectedNonce);
         String email = payload.getEmail();
         String nombre = (String) payload.get("given_name");
         String apellido = (String) payload.get("family_name");
@@ -248,6 +253,13 @@ public class UsuarioService {
             throw new BadRequestException("Su cuenta se encuentra desactivada. Comuníquese con la administración.");
         }
         return usuarioGoogle;
+    }
+
+    void validarNonceGoogle(GoogleIdToken.Payload payload, String expectedNonce) {
+        if (expectedNonce == null || expectedNonce.isBlank() || !expectedNonce.equals(payload.get("nonce"))
+                || !Boolean.TRUE.equals(payload.getEmailVerified())) {
+            throw new BadRequestException("Respuesta de Google no valida");
+        }
     }
 
     public Usuario actualizarEstado(Long id, EstadoUsuario nuevoEstado) {
@@ -382,16 +394,21 @@ public class UsuarioService {
         mailSender.send(mensaje);
     }
 
+    @Transactional
     public void restablecerContrasena(String token, String nuevaContrasena) {
+        if (token == null || token.isBlank()) {
+            throw new BadRequestException("Token requerido");
+        }
         Usuario usuario = usuarioRepository.findByTokenRecuperacion(token)
                 .orElseThrow(() -> new RuntimeException("Token inválido o expirado."));
 
-        if (usuario.getTokenExpira().isBefore(LocalDateTime.now(java.time.ZoneId.systemDefault()))) {
+        if (usuario.getTokenExpira() == null || !usuario.getTokenExpira().isAfter(LocalDateTime.now(java.time.ZoneId.systemDefault()))) {
             throw new RuntimeException("El token ha expirado.");
         }
         validarFortalezaContrasena(nuevaContrasena);
 
         usuario.setContrasena(passwordEncoder.encode(nuevaContrasena));
+        usuario.revocarTokens();
         usuario.setTokenRecuperacion(null);
         usuario.setTokenExpira(null);
 
@@ -409,6 +426,9 @@ public class UsuarioService {
 
         validarFortalezaContrasena(nuevaPassword);
         usuario.setContrasena(passwordEncoder.encode(nuevaPassword));
+        usuario.revocarTokens();
+        usuario.setTokenRecuperacion(null);
+        usuario.setTokenExpira(null);
         usuarioRepository.save(usuario);
     }
 

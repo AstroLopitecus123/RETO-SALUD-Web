@@ -129,7 +129,7 @@
         </div>
 
         <div class="modal-body-glass">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div class="profile-edit-grid">
                 <div class="form-group-modern" style="margin-bottom: 0;">
                     <label class="svg-label">Nombres</label>
                     <div class="input-glass-container">
@@ -149,7 +149,7 @@
                     <input type="email" class="form-control" [(ngModel)]="usuarioEditado.correo">
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div class="profile-edit-grid">
                 <div class="form-group-modern" style="margin-bottom: 0;">
                     <label class="svg-label">Teléfono</label>
                     <div class="input-glass-container">
@@ -252,8 +252,8 @@
 </div>
 
 <!-- Modal Cropper de Foto (modal separado encima de todo) -->
-<div class="glass-overlay" *ngIf="mostrandoCropper" style="z-index: 1100;" (click)="cancelarRecorte()">
-    <div class="glass-modal premium-card animation-pop-in" style="max-width: 480px;" (click)="$event.stopPropagation()">
+<div class="glass-overlay cropper-overlay" *ngIf="mostrandoCropper" (click)="cancelarRecorte()">
+    <div class="glass-modal premium-card animation-pop-in cropper-modal" style="max-width: 480px;" (click)="$event.stopPropagation()">
         <div class="modal-header-glass">
             <div class="header-info">
                 <div class="header-icon-box" style="background: rgba(15,191,106,0.1); color: #098246;">

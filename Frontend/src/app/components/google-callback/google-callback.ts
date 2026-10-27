@@ -26,27 +26,23 @@ export class GoogleCallbackComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    console.log('--- Iniciando verificación de Google Callback ---');
-
     const hash = window.location.hash.substring(1);
     const hashParams = new URLSearchParams(hash);
     const queryParams = new URLSearchParams(window.location.search);
 
     const idToken = hashParams.get('id_token') || queryParams.get('id_token');
 
-    console.log('Token detectado:', idToken ? 'SÍ (oculto por seguridad)' : 'NO');
+    window.history.replaceState(null, '', window.location.pathname);
 
     if (!idToken) {
-      console.error('No se encontró id_token en la URL');
+      sessionStorage.removeItem('google_nonce');
       this.ns.error('No se recibió respuesta de Google. Intenta de nuevo.');
       this.router.navigate(['/login']);
       return;
     }
 
-    console.log('Enviando token al servidor...');
     this.usuarioService.loginConGoogle(idToken).subscribe({
       next: (res) => {
-        console.log('Respuesta del servidor exitosa:', res);
 
         if (res && res.token) {
           const nombreUsuario = res.nombre || 'Usuario';
@@ -55,22 +51,18 @@ export class GoogleCallbackComponent implements OnInit {
           this.app.loginActualizado$.next();
 
           const rol = res.rol?.toUpperCase();
-          console.log('Redirigiendo a panel por rol:', rol);
 
           if (rol === 'ADMIN') this.router.navigate(['/admin']);
           else if (rol === 'MEDICO') this.router.navigate(['/medico/dashboard']);
           else if (rol === 'RECEPCION') this.router.navigate(['/recepcion/dashboard']);
           else this.router.navigate(['/paciente/dashboard']);
         } else {
-          console.error('El servidor respondió pero falta el token o datos esenciales');
           this.ns.error('La sesión no pudo ser validada. Intenta de nuevo.');
           this.router.navigate(['/login']);
         }
       },
       error: (err) => {
-        console.error('Error en la llamada al servidor (loginConGoogle):', err);
-
-        const msgError = err.error?.error || 'Error desconocido al validar con Google';
+        const msgError = err.error?.error || err.message || 'No se pudo validar con Google';
         this.ns.error('Error: ' + msgError);
         this.router.navigate(['/login']);
       }

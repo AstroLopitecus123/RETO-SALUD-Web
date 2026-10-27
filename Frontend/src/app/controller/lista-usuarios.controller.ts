@@ -64,6 +64,8 @@ export class ListaUsuariosController {
   }
 
   actualizarPagina(): void {
+    this.totalPaginas = Math.max(1, Math.ceil(this.usuariosFiltrados.length / this.itemsPorPagina));
+    this.paginaActual = Math.max(1, Math.min(this.paginaActual, this.totalPaginas));
     const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
     const fin = inicio + this.itemsPorPagina;
 
@@ -162,6 +164,7 @@ export class ListaUsuariosController {
     this.usuarioService.actualizarRol(u.id, this.nuevoRolVisual).subscribe({
       next: (res) => {
         u.rol = this.nuevoRolVisual as any;
+        this.aplicarFiltroYPaginacion();
         this.ns.success(`Rol de ${u.nombre} actualizado a ${this.nuevoRolVisual}`);
         this.cerrarModalRol();
       },

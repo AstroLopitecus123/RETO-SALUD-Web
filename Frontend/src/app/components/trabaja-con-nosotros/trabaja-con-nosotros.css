@@ -44,6 +44,8 @@
 .job-hero, .job-form-wrapper {
   position: relative;
   z-index: 3;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .job-hero {
@@ -55,6 +57,9 @@
 }
 
 .hero-glass-panel {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(20px) saturate(200%);
   border-radius: 32px;
@@ -62,7 +67,7 @@
   border-left: 8px solid #098246; /* CAMBIADO A VERDE */
   padding: 45px;
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
-  margin-left: 320px;
+   margin-left: clamp(0px, calc(100vw - 1400px), 320px);
   width: 550px;
 }
 
@@ -116,6 +121,8 @@
 }
 
 .job-card {
+  box-sizing: border-box;
+  min-width: 0;
   background: white;
   width: 100%;
   max-width: 550px;
@@ -127,11 +134,14 @@
 .card-title { text-align: center; font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
 .instructor-text { text-align: center; color: #475569; margin-bottom: 25px; }
 
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 15px; }
 
-.input-group { margin-bottom: 15px; }
+.input-group { margin-bottom: 15px; min-width: 0; }
 .input-group label { display: block; font-size: 0.8rem; font-weight: 700; color: #475569; margin-bottom: 5px; }
 .input-group input, .input-group textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
   width: 100%; padding: 12px;
   border: 1.5px solid #e2e8f0; border-radius: 10px;
   background: #f8fafc; font-size: 0.95rem;
@@ -152,6 +162,7 @@
 .role-pill.active { border-color: #098246; background: #f0fdf4; color: #0a7c4a; } /* CAMBIADO A VERDE OSCURO */
 
 .btn-submit-premium {
+  box-sizing: border-box;
   width: 100%; padding: 16px;
   background: linear-gradient(135deg, #0a7c4a 0%, #098246 100%); /* CAMBIADO A VERDE */
   color: white; border: none; border-radius: 12px;
@@ -190,4 +201,16 @@
   .job-layout { flex-direction: column; overflow-y: auto; }
   .doctor-container { display: none; }
   .hero-glass-panel { width: 90%; padding: 25px; }
+  .job-hero, .job-form-wrapper { padding: 24px 16px; }
+  .hero-glass-panel { width: 100%; }
+  .job-card { padding: 24px; }
+}
+
+.feature-item i { flex-shrink: 0; }
+.input-group textarea { resize: vertical; }
+.role-selector-compact { flex-wrap: wrap; }
+.role-pill { min-width: 0; flex-basis: 100px; }
+
+@media (max-width: 500px) {
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
 }

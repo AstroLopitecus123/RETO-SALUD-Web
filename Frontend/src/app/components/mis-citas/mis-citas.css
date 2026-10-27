@@ -157,7 +157,7 @@
 
 /* SCHEDULE TABLE */
 .schedule-grid-container { overflow-x: auto; background: white; border-radius: 20px; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -10px rgba(0,0,0,0.1); }
-.schedule-grid-container::-webkit-scrollbar { height: 0; display: none; } /* Ocultar scroll horizontal bugeado */
+.schedule-grid-container::-webkit-scrollbar { height: 8px; }
 .schedule-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 650px; table-layout: fixed; }
 .schedule-table th, .schedule-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #475569; border-right: 1px solid #475569; height: 60px; }
 .sticky-time { position: sticky; left: 0; background: #f1f5f9; z-index: 5; font-weight: 800; color: #094a2b; width: 75px; font-size: 0.85rem; border-right: 2px solid #475569 !important; }
@@ -432,4 +432,23 @@
 @media (max-width: 1024px) {
   .apt-item { flex-direction: column; text-align: center; }
   .apt-time-block { width: 100%; flex-direction: row; justify-content: center; gap: 10px; }
+}
+
+/* Scoped to appointments: this stylesheet is also imported by mis-pagos. */
+.mis-citas-full .modern-table { min-width: 900px; }
+.mis-citas-full .modern-table-container { overflow-x: auto; }
+.mis-citas-full .filters-bar-premium { flex-wrap: wrap; }
+.mis-citas-full .search-box-modern { min-width: 0; flex-basis: 240px; }
+.mis-citas-full .status-tabs-modern { flex-wrap: wrap; max-width: 100%; box-sizing: border-box; }
+.mis-citas-full .apt-time-block { box-sizing: border-box; }
+.mis-citas-full .reason-cell { overflow-wrap: anywhere; white-space: normal; max-width: 300px; }
+
+@media (max-width: 600px) {
+  .mis-citas-full { padding: 0; }
+  .mis-citas-full .filters-bar-premium { padding: 16px; gap: 16px; }
+  .mis-citas-full .search-box-modern { max-width: 100%; flex-basis: 100%; }
+  .mis-citas-full .header-actions .btn-premium-action { width: 100%; }
+  .mis-citas-full .btn-action-premium { min-width: 0; white-space: normal; }
+  :host .selection-grid-modern { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 16px; }
+  :host .semana-nav { flex-wrap: wrap; gap: 10px; }
 }

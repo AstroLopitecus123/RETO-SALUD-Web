@@ -160,6 +160,32 @@
 .mt-15 { margin-top: 15px; }
 
 /* RESPONSIVE */
+.form-grid-edit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  text-align: left;
+}
+
+.form-grid-edit .form-group-modern { min-width: 0; }
+.form-field-full { grid-column: 1 / -1; }
+
+.glass-modal .form-control-text {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+.modern-table { min-width: 800px; }
+.actions-flex { flex-wrap: wrap; }
+.card-header-modern { gap: 15px; flex-wrap: wrap; }
+
+@media (max-width: 600px) {
+  .form-grid-edit { grid-template-columns: minmax(0, 1fr); }
+  .card-header-modern { padding: 20px; }
+}
+
 @media (max-width: 1024px) {
   .badge-modern span { display: none; }
 }

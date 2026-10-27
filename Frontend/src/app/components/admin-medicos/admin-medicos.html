@@ -151,7 +151,7 @@
         </div>
 
         <!-- Campos de Datos -->
-        <div class="form-grid-edit" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left;">
+        <div class="form-grid-edit">
           <div class="form-group-modern" style="display: flex; flex-direction: column; gap: 6px;">
             <label style="font-size: 0.85rem; font-weight: 700; color: #475569;">Nombres</label>
             <input type="text" class="form-control-text" [(ngModel)]="ctrl.nombreEditado" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.95rem;">
@@ -160,7 +160,7 @@
             <label style="font-size: 0.85rem; font-weight: 700; color: #475569;">Apellidos</label>
             <input type="text" class="form-control-text" [(ngModel)]="ctrl.apellidoEditado" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.95rem;">
           </div>
-          <div class="form-group-modern" style="display: flex; flex-direction: column; gap: 6px; grid-column: span 2;">
+          <div class="form-group-modern form-field-full" style="display: flex; flex-direction: column; gap: 6px;">
             <label style="font-size: 0.85rem; font-weight: 700; color: #475569;">Correo Electrónico</label>
             <input type="email" class="form-control-text" [(ngModel)]="ctrl.correoEditado" style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.95rem;">
           </div>
@@ -185,8 +185,8 @@
   </div>
 
   <!-- Modal Cropper de Foto (encima del modal de editar) -->
-  <div class="glass-overlay" *ngIf="ctrl.mostrandoCropper" style="z-index: 1100;" (click)="ctrl.cancelarRecorte()">
-    <div class="glass-modal premium-card animation-pop-in" style="max-width: 480px;" (click)="$event.stopPropagation()">
+  <div class="glass-overlay cropper-overlay" *ngIf="ctrl.mostrandoCropper" (click)="ctrl.cancelarRecorte()">
+    <div class="glass-modal premium-card animation-pop-in cropper-modal" style="max-width: 480px;" (click)="$event.stopPropagation()">
       <div class="modal-header-glass">
         <div class="header-info">
           <div class="header-icon-box" style="background: rgba(15, 191, 106, 0.1); color: #098246;">

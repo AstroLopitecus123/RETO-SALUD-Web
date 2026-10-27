@@ -35,7 +35,7 @@ export class RegistrarUsuarioComponent implements OnInit {
   ngOnInit(): void {}
 
   registrarConGoogle(): void {
-    const nonce = Math.random().toString(36).substring(2);
+    const nonce = crypto.randomUUID();
     sessionStorage.setItem('google_nonce', nonce);
 
     const params = new URLSearchParams({

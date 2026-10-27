@@ -66,10 +66,10 @@
       </div>
 
       <!-- Chat Sidebar -->
-      <div class="chat-sidebar" [class.closed]="!isChatOpen">
+      <div class="chat-sidebar" [class.closed]="!isChatOpen" [attr.inert]="!isChatOpen ? '' : null" [attr.aria-hidden]="!isChatOpen">
          <div class="chat-header">
            <span>Mensajes en la llamada</span>
-           <button class="chat-close-btn" (click)="toggleChat()"><i class="fa-solid fa-times"></i></button>
+            <button class="chat-close-btn" aria-label="Cerrar mensajes de la llamada" (click)="toggleChat()"><i class="fa-solid fa-times"></i></button>
          </div>
          <div class="chat-messages" #chatContainer>
            <div class="chat-message" *ngFor="let msg of mensajesChat" [class.me]="msg.uid === uidLocal">
@@ -78,36 +78,38 @@
            </div>
          </div>
          <div class="chat-input-area">
-           <input type="text" placeholder="Envía un mensaje" [(ngModel)]="nuevoMensaje" (keyup.enter)="enviarMensaje()">
-           <button (click)="enviarMensaje()"><i class="fa-solid fa-paper-plane"></i></button>
+            <input type="text" aria-label="Mensaje para la llamada" placeholder="Envía un mensaje" [(ngModel)]="nuevoMensaje" (keyup.enter)="enviarMensaje()">
+            <button aria-label="Enviar mensaje" (click)="enviarMensaje()"><i class="fa-solid fa-paper-plane"></i></button>
          </div>
       </div>
 
     </div>
 
-    <footer class="teleconsulta-header" style="justify-content: center; gap: 20px;" *ngIf="unido">
+    <footer class="teleconsulta-header" style="justify-content: center; gap: 10px; flex-wrap: wrap; height: auto; min-height: 70px; padding: 8px; flex-shrink: 0;" *ngIf="unido">
 
-        <div style="position: relative;">
-          <button class="btn-control" (click)="toggleMic()" (contextmenu)="onRightClickMic($event)" [class.danger]="!micOn" [title]="micOn ? 'Silenciar (Click derecho para opciones)' : 'Activar Micrófono (Click derecho para opciones)'">
+        <div data-device-control style="position: relative; display: flex; align-items: center;">
+          <button class="btn-control" (click)="toggleMic()" [class.danger]="!micOn" [attr.aria-pressed]="micOn" [attr.aria-label]="micOn ? 'Silenciar micrófono' : 'Activar micrófono'">
               <i class="fa-solid" [class.fa-microphone]="micOn" [class.fa-microphone-slash]="!micOn"></i>
           </button>
+          <button type="button" class="btn-control" style="width: 32px;" aria-label="Elegir micrófono" aria-controls="mic-devices" [attr.aria-expanded]="showMicMenu" (click)="toggleDeviceMenu('mic', $event)" (keydown.arrowdown)="$event.preventDefault(); !showMicMenu && toggleDeviceMenu('mic', $event)"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
           
-          <div class="device-menu-container" *ngIf="showMicMenu" style="left: 0; bottom: 60px;">
+          <div id="mic-devices" class="device-menu-container" *ngIf="showMicMenu" role="group" aria-label="Micrófonos" (keydown)="deviceMenuKey($event)" style="left: 0; bottom: 60px;">
             <div style="padding: 10px 20px; font-size: 0.8rem; color: #475569; text-transform: uppercase; border-bottom: 1px solid #3c4043; margin-bottom: 5px;">Micrófonos</div>
-            <button class="device-menu-item" *ngFor="let mic of microphones" (click)="changeAudioDevice(mic.deviceId)" [class.active]="selectedMicId === mic.deviceId">
+            <button class="device-menu-item" *ngFor="let mic of microphones" (click)="changeAudioDevice(mic.deviceId)" [attr.aria-pressed]="selectedMicId === mic.deviceId" [class.active]="selectedMicId === mic.deviceId">
                <i class="fa-solid fa-check" [style.visibility]="selectedMicId === mic.deviceId ? 'visible' : 'hidden'"></i> {{ mic.label || 'Micrófono predeterminado' }}
             </button>
           </div>
         </div>
 
-        <div style="position: relative;">
-          <button class="btn-control" (click)="toggleCam()" (contextmenu)="onRightClickCam($event)" [class.danger]="!camOn" [title]="camOn ? 'Apagar Cámara (Click derecho para opciones)' : 'Encender Cámara (Click derecho para opciones)'">
+        <div data-device-control style="position: relative; display: flex; align-items: center;">
+          <button class="btn-control" (click)="toggleCam()" [class.danger]="!camOn" [attr.aria-pressed]="camOn" [attr.aria-label]="camOn ? 'Apagar cámara' : 'Encender cámara'">
               <i class="fa-solid" [class.fa-video]="camOn" [class.fa-video-slash]="!camOn"></i>
           </button>
+          <button type="button" class="btn-control" style="width: 32px;" aria-label="Elegir cámara" aria-controls="cam-devices" [attr.aria-expanded]="showCamMenu" (click)="toggleDeviceMenu('cam', $event)" (keydown.arrowdown)="$event.preventDefault(); !showCamMenu && toggleDeviceMenu('cam', $event)"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
 
-          <div class="device-menu-container" *ngIf="showCamMenu" style="left: 0; bottom: 60px;">
+          <div id="cam-devices" class="device-menu-container" *ngIf="showCamMenu" role="group" aria-label="Cámaras" (keydown)="deviceMenuKey($event)" style="left: 0; bottom: 60px;">
             <div style="padding: 10px 20px; font-size: 0.8rem; color: #475569; text-transform: uppercase; border-bottom: 1px solid #3c4043; margin-bottom: 5px;">Cámaras</div>
-            <button class="device-menu-item" *ngFor="let cam of cameras" (click)="changeVideoDevice(cam.deviceId)" [class.active]="selectedCamId === cam.deviceId">
+            <button class="device-menu-item" *ngFor="let cam of cameras" (click)="changeVideoDevice(cam.deviceId)" [attr.aria-pressed]="selectedCamId === cam.deviceId" [class.active]="selectedCamId === cam.deviceId">
                <i class="fa-solid fa-check" [style.visibility]="selectedCamId === cam.deviceId ? 'visible' : 'hidden'"></i> {{ cam.label || 'Cámara predeterminada' }}
             </button>
           </div>

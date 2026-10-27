@@ -30,6 +30,24 @@ El **Backend de RETO SALUD** es un servicio empresarial robusto desarrollado sob
 
 ---
 
+## Actualizacion de sesiones y pagos
+
+- La revocacion de sesiones requiere la columna nullable `usuarios.token_version` (`BIGINT`). Con la configuracion actual `spring.jpa.hibernate.ddl-auto=update`, Hibernate la agrega al arrancar si dispone de permisos. Si el entorno gestiona el esquema manualmente, aplicar una sola vez, solo si la columna no existe:
+
+```sql
+ALTER TABLE usuarios ADD COLUMN token_version BIGINT NULL DEFAULT 0;
+```
+
+- Los valores `NULL` y los JWT anteriores sin version equivalen a version cero. Cambiar o restablecer la contrasena incrementa la version y obliga a iniciar sesion de nuevo. Desplegar frontend y backend juntos para incluir la validacion del nonce de Google y el cierre de sesion tras cambiar la contrasena.
+- Configurar un `JWT_SECRET` estable y compartido entre replicas. Los limites en memoria son por instancia; tras un proxy, configurar la IP remota mediante proxies de confianza antes de ajustar sus cuotas.
+- Las operaciones de pago y cancelacion bloquean la cita. Un error de Stripe no debe anotarse como reembolso exitoso; reintentar la misma operacion permite conciliar el resultado. Los duplicados historicos requieren revision manual. Los tests unitarios no sustituyen una prueba de concurrencia con MySQL y Stripe en modo de pruebas.
+- `/api/teleconsulta/config` sin canal ya no entrega credenciales Deepgram. La teleconsulta autorizada conserva su contrato; sigue pendiente sustituir la clave permanente de sus participantes por credenciales temporales. El control publico de voz utiliza Web Speech API y comunica la falta de soporte del navegador.
+- Pruebas locales sin arrancar la aplicacion ni contactar proveedores:
+
+```powershell
+.\mvnw.cmd "-Dtest=*ServiceTest,CitaPagoBolaTest,CitaIntegridadTest,PagoIntegridadTest,NotificacionIntegridadTest,UsuarioAuthSecurityTest,AuthBoundarySecurityTest,JwtAuthSecurityTest" test
+```
+
 ## Arquitectura del Backend
 
 El backend centraliza toda la lógica de dominio, la integridad transaccional y la orquestación con proveedores externos:

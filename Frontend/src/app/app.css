@@ -416,7 +416,9 @@
   background: white;
   border-radius: 18px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-  overflow: hidden;
+  overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid #edf2f7;
 }
 
@@ -483,6 +485,8 @@
 
 .form-control {
   width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
   padding: 14px 18px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
@@ -1007,6 +1011,9 @@
   justify-content: center !important;
   z-index: 99999 !important;
   padding: 20px !important;
+  box-sizing: border-box;
+  height: 100dvh !important;
+  overflow: auto;
 }
 
 .glass-modal {
@@ -1017,6 +1024,99 @@
   overflow: hidden !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
   animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: 100%;
+}
+
+/* Keep the header and actions visible while only the modal body scrolls. */
+.glass-overlay .glass-modal > .modal-body-glass {
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+.glass-modal > .modal-header-glass,
+.glass-modal > .modal-footer-glass,
+.glass-modal > .cropper-footer {
+  flex-shrink: 0;
+}
+
+.glass-modal .modal-header-glass {
+  padding-right: 70px !important;
+}
+
+.glass-modal .header-info,
+.glass-modal .header-info > div:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.glass-modal .modal-footer-glass,
+.glass-modal .cropper-footer {
+  flex-wrap: wrap;
+}
+
+.glass-modal.premium-card {
+  padding: 0;
+  margin-bottom: 0;
+}
+
+.glass-overlay.cropper-overlay {
+  z-index: 100000 !important;
+}
+
+/* Preserve canvas coordinates; small screens can scroll rather than crop it. */
+.cropper-modal app-avatar-cropper {
+  display: block;
+  width: 100%;
+  min-width: 320px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.premium-welcome-banner,
+.panel-layout-container,
+.dashboard-page-content,
+.welcome-text,
+.search-box-modern {
+  min-width: 0;
+}
+
+.premium-welcome-banner {
+  box-sizing: border-box;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  flex-wrap: wrap;
+}
+
+.btn-premium-action,
+.quick-btn,
+.action-btn {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .glass-overlay { padding: 12px !important; }
+  .glass-overlay .glass-modal { margin: 0; max-height: 100%; }
+  .glass-modal .modal-header-glass { padding: 18px 65px 18px 18px !important; }
+  .glass-modal .modal-body-glass { padding: 20px 16px !important; }
+  .glass-modal .modal-footer-glass,
+  .glass-modal .cropper-footer { padding: 16px !important; gap: 10px !important; }
+  .glass-modal .modal-footer-glass > button,
+  .glass-modal .cropper-footer > button {
+    flex: 1 1 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+  }
+  .premium-welcome-banner .header-actions { width: 100%; }
+  .header-actions .btn-premium-action { justify-content: center; white-space: normal; }
 }
 
 .modal-small { max-width: 420px !important; }

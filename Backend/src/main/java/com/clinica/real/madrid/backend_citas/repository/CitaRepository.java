@@ -16,6 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 public interface CitaRepository extends JpaRepository<Cita, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Cita c WHERE c.id = :id")
+    java.util.Optional<Cita> findByIdForUpdate(@Param("id") Long id);
+
+    List<Cita> findByPacienteIdAndMedico_Usuario_IdOrderByFechaDesc(Long pacienteId, Long usuarioMedicoId);
+
+    @Query("SELECT c.id FROM Cita c WHERE c.estado = :estado AND c.fechaCreacion < :limite")
+    List<Long> findIdsAbandonadas(@Param("estado") EstadoCita estado, @Param("limite") LocalDateTime limite);
+
     boolean existsByPacienteId(Long pacienteId);
 
     boolean existsByMedicoId(Long medicoId);

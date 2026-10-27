@@ -1,6 +1,7 @@
 package com.clinica.real.madrid.backend_citas.controller;
 
 import com.clinica.real.madrid.backend_citas.model.Cita;
+import com.clinica.real.madrid.backend_citas.exception.BadRequestException;
 import com.clinica.real.madrid.backend_citas.model.Usuario;
 import com.clinica.real.madrid.backend_citas.repository.UsuarioRepository;
 import com.clinica.real.madrid.backend_citas.security.UsuarioPrincipal;
@@ -40,6 +41,20 @@ public class CitaController {
         );
     }
 
+    private boolean esMedicoPropio(Long id, Authentication auth) {
+        if (esStaff(auth)) return true;
+        if (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal principal)) return false;
+        Cita cita = citaService.obtenerPorId(id);
+        return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"))
+                && cita.getMedico() != null && cita.getMedico().getUsuario() != null
+                && principal.getId().equals(cita.getMedico().getUsuario().getId());
+    }
+
+    private boolean esPacientePropio(Cita cita, Authentication auth) {
+        return auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal
+                && cita.getPaciente() != null && principal.getId().equals(cita.getPaciente().getId());
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION')")
     public ResponseEntity<?> listar() {
@@ -53,11 +68,8 @@ public class CitaController {
         if (cita == null) {
             return ResponseEntity.notFound().build();
         }
-        if (!esStaff(auth) && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-            boolean esSuPaciente = cita.getPaciente() != null && cita.getPaciente().getId().equals(principal.getId());
-            boolean esSuMedico = cita.getMedico() != null && cita.getMedico().getUsuario() != null
-                    && cita.getMedico().getUsuario().getId().equals(principal.getId());
-            if (!esSuPaciente && !esSuMedico) {
+        if (!esStaff(auth)) {
+            if (!esPacientePropio(cita, auth) && !esMedicoPropio(id, auth)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Acceso denegado a esta cita"));
             }
         }
@@ -76,13 +88,15 @@ public class CitaController {
     public ResponseEntity<?> abandonarCheckout(@PathVariable Long id, Authentication auth) {
         try {
             Cita cita = citaService.obtenerPorId(id);
-            if (!esStaff(auth) && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-                if (cita.getPaciente() == null || !cita.getPaciente().getId().equals(principal.getId())) {
+            if (!esStaff(auth)) {
+                if (!esPacientePropio(cita, auth)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes abandonar una cita ajena"));
                 }
             }
             citaService.abandonarCheckout(id);
             return ResponseEntity.ok(Map.of("mensaje", "Reserva abandonada y horario liberado"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
@@ -90,14 +104,27 @@ public class CitaController {
 
     @GetMapping("/usuario/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO') or #id == authentication.principal.id")
-    public ResponseEntity<?> listarCitasPorUsuario(@PathVariable Long id) {
+    public ResponseEntity<?> listarCitasPorUsuario(@PathVariable Long id, Authentication auth) {
+        if (!esStaff(auth)) {
+            if (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal principal)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            if (auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_MEDICO"))) {
+                return ResponseEntity.ok(citaService.obtenerCitasPorPacienteYMedico(id, principal.getId()));
+            }
+            if (!id.equals(principal.getId())) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         List<Cita> citas = citaService.obtenerCitasPorPaciente(id);
         return ResponseEntity.ok(citas);
     }
 
     @GetMapping("/medico/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO')")
-    public ResponseEntity<?> listarCitasPorMedico(@PathVariable Long id) {
+    public ResponseEntity<?> listarCitasPorMedico(@PathVariable Long id, Authentication auth) {
+        if (!esStaff(auth) && (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal principal)
+                || !citaService.esMedicoPropio(id, principal.getId()))) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         List<Cita> citas = citaService.obtenerCitasPorMedico(id);
         return ResponseEntity.ok(citas);
     }
@@ -105,6 +132,9 @@ public class CitaController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public Cita crear(@RequestBody Cita cita, Authentication auth) {
+        if (!esStaff(auth) && (auth == null || !(auth.getPrincipal() instanceof UsuarioPrincipal))) {
+            throw new org.springframework.security.access.AccessDeniedException("Usuario autenticado requerido");
+        }
         if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
             Usuario paciente = usuarioRepository.findById(principal.getId())
                     .orElseThrow(() -> new RuntimeException("Usuario autenticado no encontrado"));
@@ -119,6 +149,8 @@ public class CitaController {
         try {
             citaService.confirmarCita(id);
             return ResponseEntity.ok(Map.of("mensaje", "Cita confirmada correctamente"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
@@ -132,6 +164,8 @@ public class CitaController {
         try {
             citaService.cancelarCita(id);
             return ResponseEntity.ok("Cita cancelada correctamente");
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
@@ -145,6 +179,8 @@ public class CitaController {
         try {
             citaService.reprogramarCita(id, nuevaCita.getFecha());
             return ResponseEntity.ok(Map.of("mensaje", "Cita reprogramada correctamente"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());
         } catch (Exception e) {
@@ -157,13 +193,15 @@ public class CitaController {
     public ResponseEntity<?> solicitarReprogramar(@PathVariable Long id, @RequestBody Cita nuevaCita, Authentication auth) {
         try {
             Cita cita = citaService.obtenerPorId(id);
-            if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-                if (cita.getPaciente() == null || !cita.getPaciente().getId().equals(principal.getId())) {
+            if (!esStaff(auth)) {
+                if (!esPacientePropio(cita, auth)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes reprogramar una cita ajena"));
                 }
             }
             citaService.solicitarReprogramacion(id, nuevaCita.getFecha(), nuevaCita.getMotivo());
             return ResponseEntity.ok(Map.of("mensaje", "Solicitud de reprogramación enviada"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error al solicitar reprogramación: " + e.getMessage());
         }
@@ -171,10 +209,13 @@ public class CitaController {
 
     @PutMapping("/{id}/confirmar-reprogramar")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO')")
-    public ResponseEntity<?> confirmarReprogramar(@PathVariable Long id) {
+    public ResponseEntity<?> confirmarReprogramar(@PathVariable Long id, Authentication auth) {
+        if (!esMedicoPropio(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         try {
             citaService.confirmarReprogramacion(id);
             return ResponseEntity.ok(Map.of("mensaje", "Reprogramación confirmada correctamente"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(e.getMessage());
         }
@@ -182,10 +223,13 @@ public class CitaController {
 
     @PutMapping("/{id}/rechazar-reprogramar")
     @PreAuthorize("hasRole('ADMIN') or hasRole('RECEPCION') or hasRole('MEDICO')")
-    public ResponseEntity<?> rechazarReprogramar(@PathVariable Long id) {
+    public ResponseEntity<?> rechazarReprogramar(@PathVariable Long id, Authentication auth) {
+        if (!esMedicoPropio(id, auth)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         try {
             citaService.rechazarReprogramacion(id);
             return ResponseEntity.ok(Map.of("mensaje", "Solicitud de reprogramación rechazada correctamente"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
@@ -196,14 +240,16 @@ public class CitaController {
     public ResponseEntity<?> solicitarCancelar(@PathVariable Long id, @RequestBody Map<String, String> body, Authentication auth) {
         try {
             Cita cita = citaService.obtenerPorId(id);
-            if (!esStaff(auth) && auth != null && auth.getPrincipal() instanceof UsuarioPrincipal principal) {
-                if (cita.getPaciente() == null || !cita.getPaciente().getId().equals(principal.getId())) {
+            if (!esStaff(auth)) {
+                if (!esPacientePropio(cita, auth)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "No puedes cancelar una cita ajena"));
                 }
             }
             String motivo = body.getOrDefault("motivo", "Sin motivo especificado");
             citaService.solicitarCancelacion(id, motivo);
             return ResponseEntity.ok(Map.of("mensaje", "Solicitud de cancelación enviada"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error al solicitar cancelación: " + e.getMessage());
         }
@@ -215,6 +261,8 @@ public class CitaController {
         try {
             citaService.confirmarCancelacion(id);
             return ResponseEntity.ok(Map.of("mensaje", "Cancelación aprobada y reembolso procesado"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
@@ -226,6 +274,8 @@ public class CitaController {
         try {
             citaService.rechazarCancelacion(id);
             return ResponseEntity.ok(Map.of("mensaje", "Solicitud de cancelación rechazada correctamente"));
+        } catch (BadRequestException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }

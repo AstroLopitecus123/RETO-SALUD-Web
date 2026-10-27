@@ -4,7 +4,7 @@ import { PagoService } from '../../services/pago.service';
 import { Pago } from '../../models/pago.model';
 import { RouterModule } from '@angular/router';
 import { NotificationService } from '../../services/notification.service';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, defer, finalize } from 'rxjs';
 
 @Component({
   selector: 'app-mis-pagos',
@@ -29,6 +29,7 @@ export class MisPagosComponent implements OnInit, OnDestroy {
   mostrandoConfirmarAnular = false;
   pagoAEliminarId: number | null = null;
   private pollingSub?: Subscription;
+  private cargandoPagos = false;
 
   constructor(
     private pagoService: PagoService,
@@ -59,40 +60,35 @@ export class MisPagosComponent implements OnInit, OnDestroy {
   }
 
   cargarPagos(showLoading: boolean = true) {
+    if (this.cargandoPagos || !this.usuario) return;
+    this.cargandoPagos = true;
     if (showLoading) this.cargando = true;
-    let request$;
-
-    const rol = this.usuario.rol?.toUpperCase();
-
-    if (rol === 'PACIENTE') {
-      request$ = this.pagoService.obtenerPagosPorUsuario(this.usuario.id);
-    } else if (rol === 'MEDICO') {
-
-      const medicoId = this.usuario.medicoId || this.usuario.id;
-      request$ = this.pagoService.obtenerPagosPorMedico(medicoId);
-    } else {
-
-      request$ = this.pagoService.obtenerTodosLosPagos();
-    }
-
-    if (request$) {
-      request$.subscribe({
-        next: (data) => {
-          this.pagos = data.sort((a,b) => {
-            const dateA = a.fechaPago ? new Date(a.fechaPago).getTime() : 0;
-            const dateB = b.fechaPago ? new Date(b.fechaPago).getTime() : 0;
-            return dateB - dateA;
-          });
-          this.calcularAnaliticas();
-          if (showLoading) this.cargando = false;
-        },
-        error: (err) => {
-          console.error('Error al cargar pagos:', err);
-          this.error = 'Error al recuperar el historial de transacciones.';
-          if (showLoading) this.cargando = false;
-        }
-      });
-    }
+    const request$ = defer(() => {
+      const rol = this.usuario.rol?.toUpperCase();
+      if (rol === 'PACIENTE') {
+        return this.pagoService.obtenerPagosPorUsuario(this.usuario.id);
+      }
+      if (rol === 'MEDICO') {
+        const medicoId = this.usuario.medicoId || this.usuario.id;
+        return this.pagoService.obtenerPagosPorMedico(medicoId);
+      }
+      return this.pagoService.obtenerTodosLosPagos();
+    });
+    request$.pipe(finalize(() => { this.cargandoPagos = false; this.cargando = false; })).subscribe({
+      next: (data) => {
+        this.error = '';
+        this.pagos = data.sort((a,b) => {
+          const dateA = a.fechaPago ? new Date(a.fechaPago).getTime() : 0;
+          const dateB = b.fechaPago ? new Date(b.fechaPago).getTime() : 0;
+          return dateB - dateA;
+        });
+        this.calcularAnaliticas();
+      },
+      error: (err) => {
+        console.error('Error al cargar pagos:', err);
+        this.error = 'Error al recuperar el historial de transacciones.';
+      }
+    });
   }
 
   calcularAnaliticas() {

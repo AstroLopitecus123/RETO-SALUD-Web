@@ -44,6 +44,15 @@ public class Usuario {
     @Column(nullable = false, length = 255)
     private String contrasena;
 
+    @JsonIgnore
+    @Column(name = "token_version")
+    private Long tokenVersion = 0L;
+
+    @JsonIgnore
+    public long getTokenVersion() { return tokenVersion == null ? 0L : tokenVersion; }
+
+    public void revocarTokens() { tokenVersion = Math.addExact(getTokenVersion(), 1L); }
+
     @Column(nullable = true, unique = true, length = 20)
     private String dni;
 

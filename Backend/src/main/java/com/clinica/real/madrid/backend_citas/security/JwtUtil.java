@@ -13,6 +13,9 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.clinica.real.madrid.backend_citas.repository.UsuarioRepository usuarioRepository;
+
     @Value("${jwt.secret:}")
     private String jwtSecret; 
 
@@ -39,11 +42,14 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
+        long version = usuarioRepository.findByCorreo(username)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado")).getTokenVersion();
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("ver", version)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -60,13 +66,17 @@ public class JwtUtil {
         return claims.getSubject();
     }
 
-    public boolean validateToken(String token) {
+    public boolean validateToken(String token, UsuarioPrincipal principal) {
         try {
-            Jwts.parserBuilder()
+            Claims claims = Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
-                .parseClaimsJws(token);
-            return true;
+                .parseClaimsJws(token).getBody();
+            Object version = claims.get("ver");
+            // Los JWT emitidos antes de esta migracion equivalen solo a version cero.
+            long tokenVersion = version == null ? 0L : claims.get("ver", Long.class);
+            return tokenVersion == principal.getTokenVersion()
+                    && principal.getUsername().equals(claims.getSubject());
         } catch (JwtException | IllegalArgumentException ex) {
             return false;
         }
