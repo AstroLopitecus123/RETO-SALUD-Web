@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UsuarioService } from '../../services/usuario.service';
@@ -24,6 +24,7 @@ export class MiPerfilComponent implements OnInit {
   editando = false;
   cargando = true;
   subiendoFoto = false;
+  mostrarFotoGrande = false;
 
   // Cropper properties
   selectedImageFile: File | null = null;
@@ -88,6 +89,23 @@ export class MiPerfilComponent implements OnInit {
 
   cancelarEdicion() {
     this.editando = false;
+  }
+
+  abrirFotoGrande(): void {
+    if (this.usuario?.fotoUrl) {
+      this.mostrarFotoGrande = true;
+    }
+  }
+
+  cerrarFotoGrande(): void {
+    this.mostrarFotoGrande = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeFotoGrande(): void {
+    if (this.mostrarFotoGrande) {
+      this.cerrarFotoGrande();
+    }
   }
 
   guardarCambios() {

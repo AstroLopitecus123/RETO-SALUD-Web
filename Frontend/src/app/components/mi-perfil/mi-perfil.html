@@ -28,10 +28,10 @@
                 <div class="avatar-section">
                   <div class="avatar-wrapper">
                     <div class="avatar-img-container">
-                      <img *ngIf="usuario.fotoUrl" [src]="usuario.fotoUrl" alt="Foto de perfil">
+                      <img *ngIf="usuario.fotoUrl" [src]="usuario.fotoUrl" alt="Foto de perfil" (click)="abrirFotoGrande()" class="avatar-clickable" title="Click para ver en grande">
                       <i *ngIf="!usuario.fotoUrl" class="fa-solid fa-user-circle default-avatar"></i>
                       
-                      <label class="camera-btn" title="Cambiar foto de perfil" for="avatar-input" aria-label="Cambiar foto de perfil">
+                      <label class="camera-btn" title="Cambiar foto de perfil" for="avatar-input" aria-label="Cambiar foto de perfil" (click)="$event.stopPropagation()">
                         <i class="fa-solid fa-camera"></i>
                         <input id="avatar-input" type="file" (change)="onFileSelected($event)" accept="image/*" style="display: none;" aria-label="Subir foto de perfil">
                       </label>
@@ -287,6 +287,13 @@
                 <i class="fa-solid fa-circle-notch fa-spin" *ngIf="subiendoFoto"></i> Guardar Foto
             </button>
         </div>
+    </div>
+</div>
+
+<div class="discord-lightbox-overlay" *ngIf="mostrarFotoGrande" (click)="cerrarFotoGrande()">
+    <button class="discord-lightbox-close" (click)="cerrarFotoGrande()" aria-label="Cerrar vista">&times;</button>
+    <div class="discord-lightbox-content" (click)="$event.stopPropagation()">
+        <img [src]="usuario.fotoUrl" [alt]="usuario.nombre" class="discord-lightbox-img">
     </div>
 </div>
 
